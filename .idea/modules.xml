@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/EasyOSM demo/EasyOSM demo.iml" filepath="$PROJECT_DIR$/EasyOSM demo/EasyOSM demo.iml" />
+      <module fileurl="file://$PROJECT_DIR$/easyosm.iml" filepath="$PROJECT_DIR$/easyosm.iml" />
+      <module fileurl="file://$PROJECT_DIR$/easyosm/easyosm-easyosm.iml" filepath="$PROJECT_DIR$/easyosm/easyosm-easyosm.iml" />
+    </modules>
+  </component>
+</project>
+
