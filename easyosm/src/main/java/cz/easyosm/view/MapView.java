@@ -13,6 +13,8 @@ import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.widget.OverScroller;
 
+import cz.easyosm.util.MyMath;
+
 /**
  * Created by martinjr on 3/24/14.
  */
@@ -24,7 +26,7 @@ public class MapView extends View {
     private int x=0, y=0;
     private float zoomLevel=1;
 
-    private Paint textPaint;
+    private Paint textPaint, testPaint;
 
     private int bgcolor=0xff00ff00;
 
@@ -46,8 +48,12 @@ public class MapView extends View {
     private void init() {
         scroller=new OverScroller(getContext());
 
+        testPaint=new Paint();
+        testPaint.setColor(0xff000000);
+
         textPaint=new Paint();
         textPaint.setTextSize(30);
+        textPaint.setColor(0xffffffff);
 
         scaleGestureDetector = new ScaleGestureDetector(getContext(), scaleGestureListener);
         gestureDetector = new GestureDetectorCompat(getContext(), gestureListener);
@@ -56,25 +62,11 @@ public class MapView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        canvas.drawColor(0xff00ff00);
-        canvas.drawText(String.format("x: %d; y: %d", x, y), 10, 40, textPaint);
+        canvas.drawColor(bgcolor);
 
-        int d=(int) (100*zoomLevel);
+        canvas.drawCircle(drawX((int) (128*MyMath.pow2(zoomLevel))), drawY((int) (128*MyMath.pow2(zoomLevel))), (float) (50*MyMath.pow2(zoomLevel)), testPaint);
 
-        int lx=d-x%d, ly=d-y%d;
-
-        while (lx<canvas.getWidth()) {
-            canvas.drawLine(lx, 0, lx, canvas.getHeight(), textPaint);
-            lx+=d;
-        }
-
-
-        while (ly<canvas.getHeight()) {
-            canvas.drawLine(0, ly, canvas.getWidth(), ly, textPaint);
-            ly+=d;
-        }
-
-        canvas.drawCircle(drawX((int) (500*zoomLevel)), drawY((int) (500*zoomLevel)), 50*zoomLevel, textPaint);
+        canvas.drawText(String.format("x: %.3f; y: %.3f", x/MyMath.pow2(zoomLevel), y/MyMath.pow2(zoomLevel)), 10, 40, textPaint);
     }
 
     @Override
@@ -108,23 +100,32 @@ public class MapView extends View {
             = new ScaleGestureDetector.SimpleOnScaleGestureListener() {
 
         @Override
-        public boolean onScaleBegin(ScaleGestureDetector scaleGestureDetector) {
+        public boolean onScaleBegin(ScaleGestureDetector sgd) {
             bgcolor=0xff0000ff;
-            return true;
-        }
-
-        @Override
-        public boolean onScale(ScaleGestureDetector scaleGestureDetector) {
-            zoomLevel*=scaleGestureDetector.getScaleFactor();
-
-            Log.d("iPass", "Zoom is "+zoomLevel);
             postInvalidate();
             return true;
         }
 
         @Override
-        public void onScaleEnd(ScaleGestureDetector detector) {
+        public boolean onScale(ScaleGestureDetector sgd) {
+            float dz=sgd.getScaleFactor();
+            float dx=sgd.getFocusX();
+            float dy=sgd.getFocusY();
+
+            Log.d("iPass", "Zoom by "+dz+" on "+dx+", "+dy);
+
+            zoomLevel+=MyMath.log2(dz);
+            x=(int) ((x+dx)*dz-dx);
+            y=(int) ((y+dy)*dz-dy);
+
+            postInvalidate();
+            return true;
+        }
+
+        @Override
+        public void onScaleEnd(ScaleGestureDetector sgd) {
             bgcolor=0xff00ff00;
+            postInvalidate();
         }
     };
 
