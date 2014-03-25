@@ -1,16 +1,31 @@
 package cz.easyosm.demo;
 
+import android.os.Environment;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 
+import java.io.File;
+
+import cz.easyosm.util.GeoPoint;
+import cz.easyosm.view.MapView;
+
 public class MainActivity extends ActionBarActivity {
+    private MapView map;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        GeoPoint home=new GeoPoint(50.087, 14.420);
+
+        map=(MapView) findViewById(R.id.map);
+        map.setTileFile(new File(Environment.getExternalStorageDirectory().getPath()+"/osmdroid/map.mbtiles"));
+        map.setZoomLimits(12, 19, 10, 17);
+        map.setZoomLevel(15);
+        map.setViewCenter(home);
     }
 
 

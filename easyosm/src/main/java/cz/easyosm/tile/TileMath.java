@@ -208,11 +208,11 @@ public class TileMath {
         return out;
     }
 
-    public static Point PixelXYToTileXY(final int pixelX, final int pixelY, final double tileSize, final Point reuse) {
+    public static Point PixelXYToTileXY(final int pixelX, final int pixelY, final float zoomLevel, final Point reuse) {
         final Point out = (reuse == null ? new Point() : reuse);
 
-        out.x = (int) (pixelX / tileSize);
-        out.y = (int) (pixelY / tileSize);
+        out.x = (int) (pixelX / MyMath.tileSize(mTileSize, zoomLevel));
+        out.y = (int) (pixelY / MyMath.tileSize(mTileSize, zoomLevel));
         return out;
     }
 

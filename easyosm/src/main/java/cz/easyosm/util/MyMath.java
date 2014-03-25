@@ -21,8 +21,8 @@ public class MyMath {
      * @param zoomLevel desired zoom level
      * @return
      */
-    public static float tileSize(int tileSize, float zoomLevel) {
-        return (float) (tileSize*pow2(fractionalPart(zoomLevel)));
+    public static double tileSize(int tileSize, float zoomLevel) {
+        return tileSize*pow2(fractionalPart(zoomLevel));
     }
 
     /**

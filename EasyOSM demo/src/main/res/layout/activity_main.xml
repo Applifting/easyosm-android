@@ -2,13 +2,14 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="cz.easyosm.demo.MainActivity">
+    tools:context="cz.easyosm.demo.MainActivity"
+        android:id="@+id/root">
 
     <view
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             class="cz.easyosm.view.MapView"
-            android:id="@+id/view"
+            android:id="@+id/map"
             android:layout_alignParentLeft="true"/>
 
 </RelativeLayout>
