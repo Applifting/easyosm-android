@@ -5,6 +5,7 @@ import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.SeekBar;
 
 import java.io.File;
 
@@ -26,6 +27,26 @@ public class MainActivity extends ActionBarActivity {
         map.setZoomLimits(12, 19, 10, 17);
         map.setZoomLevel(15);
         map.setViewCenter(home);
+
+        SeekBar zoom=(SeekBar)findViewById(R.id.zoom);
+        zoom.setMax(1000);
+        zoom.setProgress(750);
+        zoom.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                map.setZoomLevel(progress/50f);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
     }
 
 

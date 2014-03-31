@@ -3,6 +3,9 @@ package cz.easyosm.tile;
 import android.graphics.Point;
 import android.graphics.drawable.Drawable;
 
+import java.util.List;
+import java.util.Map;
+
 /**
  * Created by martinjr on 3/24/14.
  */

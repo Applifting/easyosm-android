@@ -7,7 +7,6 @@ import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.drawable.Drawable;
 import android.support.v4.view.GestureDetectorCompat;
-import android.support.v4.view.ViewCompat;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.GestureDetector;
@@ -45,6 +44,8 @@ public class MapView extends View {
 
     private int bgcolor=0xff00ff00;
 
+    private Point focus;
+
     public MapView(Context context) {
         super(context);
         init();
@@ -64,11 +65,13 @@ public class MapView extends View {
         scroller=new OverScroller(getContext());
 
         testPaint=new Paint();
-        testPaint.setColor(Color.BLACK);
+        testPaint.setColor(0xaa00FFFF);
 
         textPaint=new Paint();
         textPaint.setTextSize(30);
         textPaint.setColor(Color.BLACK);
+
+        focus=new Point();
 
         scaleGestureDetector = new ScaleGestureDetector(getContext(), scaleGestureListener);
         gestureDetector = new GestureDetectorCompat(getContext(), gestureListener);
@@ -82,13 +85,16 @@ public class MapView extends View {
         drawTiles(canvas);
 
         canvas.drawText(String.format("x: %d; y: %d; z: %.3f", x, y, zoomLevel), 10, 40, textPaint);
+
+        if (isScaling) canvas.drawCircle(focus.x, focus.y, 50, testPaint);
     }
 
     private void drawTiles(Canvas canvas) {
         Point tl=TileMath.PixelXYToTileXY(x, y, zoomLevel, null);
         Point br=TileMath.PixelXYToTileXY(x+canvas.getWidth(), y+canvas.getHeight(), zoomLevel, null);
-        Point tileTL=new Point();
         Drawable d;
+
+        double tileSize=TileMath.tileSize(256, zoomLevel);
 
         MapTile curr;
 
@@ -97,11 +103,9 @@ public class MapView extends View {
                 curr=new MapTile(j, i, (int) zoomLevel);
 
                 d=tileProvider.getTile(curr);
-                tileTL=TileMath.TileXYToPixelXY(j, i, zoomLevel, tileTL);
-                d.setBounds(tileTL.x-x, tileTL.y-y,
-                        (int)(tileTL.x-x+MyMath.tileSize(256, zoomLevel)+1),
-                        (int)(tileTL.y-y+MyMath.tileSize(256, zoomLevel)+1)
-                    );
+
+                d.setBounds(MyMath.ceil(j*tileSize)-x, MyMath.ceil(i*tileSize)-y,
+                        MyMath.ceil((j+1)*tileSize)-x, MyMath.ceil((i+1)*tileSize)-y);
                 d.draw(canvas);
             }
         }
@@ -140,13 +144,15 @@ public class MapView extends View {
     }
 
     public void setZoomLevel(float newZoom) {
-        double dz=MyMath.pow2(zoomLevel-newZoom);
-        double dx=getWidth()/2;
-        double dy=getHeight()/2;
+        setZoomLevelFixing(newZoom, getWidth()/2, getHeight()/2);
+    }
+
+    public void setZoomLevelFixing(float newZoom, int fixX, int fixY) {
+        double dz=MyMath.pow2(newZoom-zoomLevel);
 
         zoomLevel=newZoom;
-        x=(int) ((x+dx)*dz-dx);
-        y=(int) ((y+dy)*dz-dy);
+        x=(int) ((x+fixX)*dz-fixX);
+        y=(int) ((y+fixY)*dz-fixY);
 
         postInvalidate();
     }
@@ -179,16 +185,14 @@ public class MapView extends View {
 
         @Override
         public boolean onScale(ScaleGestureDetector sgd) {
-            Log.d("iPass", "onScale");
             double dz=sgd.getScaleFactor();
-            double dx=sgd.getFocusX();
-            double dy=sgd.getFocusY();
+            setZoomLevelFixing((float) (zoomLevel+MyMath.log2(dz)), (int)sgd.getFocusX(), (int)sgd.getFocusY());
 
-            zoomLevel+=MyMath.log2(dz);
-            x=(int) ((x+dx)*dz-dx);
-            y=(int) ((y+dy)*dz-dy);
+            focus.x=(int) sgd.getFocusX();
+            focus.y=(int) sgd.getFocusY();
 
             postInvalidate();
+
             return true;
         }
 
@@ -209,13 +213,39 @@ public class MapView extends View {
         }
 
         @Override
+        public boolean onSingleTapUp(MotionEvent e) {
+            return false;
+        }
+
+        @Override
+        public void onLongPress(MotionEvent e) {
+
+        }
+
+        @Override
+        public void onShowPress(MotionEvent e) {
+            super.onShowPress(e);
+        }
+
+        @Override
+        public boolean onDoubleTapEvent(MotionEvent e) {
+            return false;
+        }
+
+        @Override
+        public boolean onSingleTapConfirmed(MotionEvent e) {
+            setZoomLevel(zoomLevel+0.02f);
+            return true;
+        }
+
+        @Override
         public boolean onDoubleTap(MotionEvent e) {
+            setZoomLevel(zoomLevel-0.2f);
             return true;
         }
 
         @Override
         public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
-            Log.d("iPass", "onScroll");
             if (isScaling) return false;
             x+=distanceX;
             y+=distanceY;

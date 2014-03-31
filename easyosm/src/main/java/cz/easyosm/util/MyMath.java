@@ -15,26 +15,8 @@ public class MyMath {
         return f-((int)f);
     }
 
-    /**
-     * Calculate tile size for a fractional zoom level
-     * @param tileSize base tile size
-     * @param zoomLevel desired zoom level
-     * @return
-     */
-    public static double tileSize(int tileSize, float zoomLevel) {
-        return tileSize*pow2(fractionalPart(zoomLevel));
-    }
-
-    /**
-     * Adjust zoom to make tile size integer
-     * @param zoomIn desired zoom
-     * @param tileSize base map tile size
-     * @return  adjusted zoom level
-     */
-    public static float adjustZoom(float zoomIn, int tileSize) {
-        float newSize=Math.round(tileSize(tileSize, zoomIn));
-
-        return (float) ((int)zoomIn+log2(newSize/tileSize));
+    public static int ceil(double x) {
+        return (int) Math.ceil(x);
     }
 
     public static double log2(double x) {

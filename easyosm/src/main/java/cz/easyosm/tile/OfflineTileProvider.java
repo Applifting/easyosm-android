@@ -13,6 +13,8 @@ import android.util.Log;
 
 import java.io.File;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -23,10 +25,10 @@ public class OfflineTileProvider extends TileProviderBase {
 
     private MBTilesArchive archive;
 
-    private Map<MapTile, Drawable> cache;
+    private TileCache cache;
 
     public OfflineTileProvider(File f) {
-        cache=new HashMap(); // TODO: need an actual cache
+        cache=new TileCache();
 
         file=f;
         archive=MBTilesArchive.getDatabaseFileArchive(f);
@@ -41,7 +43,7 @@ public class OfflineTileProvider extends TileProviderBase {
     public Drawable getTile(MapTile tile) {
         //Log.d("iPass", "Get tile "+tile);
         Drawable bd;
-        if (cache.containsKey(tile)) {
+        if (cache.contains(tile)) {
             bd=cache.get(tile);
         }
         else {
@@ -98,7 +100,7 @@ public class OfflineTileProvider extends TileProviderBase {
                 MapTile load=new MapTile(newX, newY, maxDataLevel);
 
                 Drawable toScale;
-                if (cache.containsKey(load)) toScale=cache.get(load);
+                if (cache.contains(load)) toScale=cache.get(load);
                 else toScale=new BitmapDrawable(BitmapFactory.decodeStream(archive.getInputStream(tile)));
 
                 int o=256/(1<<dZoom);
