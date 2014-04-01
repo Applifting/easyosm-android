@@ -39,6 +39,7 @@ public class MBTilesArchive {
     }
 
     public InputStream getInputStream(MapTile tile) {
+        Cursor cur=null;
         try {
             InputStream ret = null;
             final String[] dataColumn = { COL_TILES_TILE_DATA };
@@ -47,21 +48,23 @@ public class MBTilesArchive {
                     , Integer.toString((1<<tile.zoom) - tile.y - 1)  // Use Google Tiling Spec
                     , Integer.toString(tile.zoom)
             };
-            //Log.d("iPass", "Fetching tile "+tile+" = ["+xyz[0]+","+xyz[1]+"], zoom="+xyz[2]);
 
-            final Cursor cur = db.query(TABLE_TILES, dataColumn, "tile_column=? and tile_row=? and zoom_level=?", xyz, null, null, null);
+            cur = db.query(TABLE_TILES, dataColumn, "tile_column=? and tile_row=? and zoom_level=?", xyz, null, null, null);
 
-            if(cur.getCount() != 0) {
+            if (cur.getCount() != 0) {
                 cur.moveToFirst();
                 ret = new ByteArrayInputStream(cur.getBlob(0));
-                //Log.d("iPass", "Fetched tile "+tile);
+                Log.d("iPass", "Succesfuly fetched "+tile);
             }
-            cur.close();
-            if (ret != null) {
-                return ret;
+            else {
+                Log.d("iPass", "Failed to fetch "+tile);
             }
+
+            return ret;
         } catch(final Throwable e) {
             Log.w("Error getting db stream: "+tile, e);
+        } finally {
+            cur.close();
         }
 
         return null;

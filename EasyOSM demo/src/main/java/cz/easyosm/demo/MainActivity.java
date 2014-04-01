@@ -20,11 +20,13 @@ public class MainActivity extends ActionBarActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        getWindow().setBackgroundDrawable(null);
+
         GeoPoint home=new GeoPoint(50.087, 14.420);
 
         map=(MapView) findViewById(R.id.map);
         map.setTileFile(new File(Environment.getExternalStorageDirectory().getPath()+"/osmdroid/map.mbtiles"));
-        map.setZoomLimits(12, 19, 10, 17);
+        map.setZoomLimits(10, 19, 13, 17);
         map.setZoomLevel(15);
         map.setViewCenter(home);
 

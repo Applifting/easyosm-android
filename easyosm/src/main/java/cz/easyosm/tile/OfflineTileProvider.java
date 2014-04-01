@@ -12,6 +12,7 @@ import android.graphics.drawable.Drawable;
 import android.util.Log;
 
 import java.io.File;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -45,8 +46,10 @@ public class OfflineTileProvider extends TileProviderBase {
         Drawable bd;
         if (cache.contains(tile)) {
             bd=cache.get(tile);
+            Log.d("iPass", "Direct cache hit: "+tile);
         }
         else {
+            Log.d("iPass", "Fetching tile: "+tile);
             bd=fetchTile(tile);
             cache.put(tile, bd);
         }
@@ -81,7 +84,9 @@ public class OfflineTileProvider extends TileProviderBase {
 
     private Drawable fetchTile(MapTile tile) {
         if (minDataLevel<=tile.zoom && tile.zoom<=maxDataLevel) { // true data available
-            return new BitmapDrawable(BitmapFactory.decodeStream(archive.getInputStream(tile)));
+            InputStream stream=archive.getInputStream(tile);
+            if (stream!=null) return new BitmapDrawable(BitmapFactory.decodeStream(stream));
+            else return null;
         }
         else {
             if (minDataLevel>tile.zoom) { // TODO: scale down
@@ -91,6 +96,7 @@ public class OfflineTileProvider extends TileProviderBase {
                 return new BitmapDrawable(bitmap);
             }
             else { //scale up
+                Log.d("iPass", "Upscaling");
                 int dZoom=tile.zoom-maxDataLevel;
                 int newX=tile.x>>dZoom,
                         newY=tile.y>>dZoom,
@@ -100,8 +106,18 @@ public class OfflineTileProvider extends TileProviderBase {
                 MapTile load=new MapTile(newX, newY, maxDataLevel);
 
                 Drawable toScale;
-                if (cache.contains(load)) toScale=cache.get(load);
-                else toScale=new BitmapDrawable(BitmapFactory.decodeStream(archive.getInputStream(tile)));
+                if (cache.contains(load)) {
+                    toScale=cache.get(load);
+                    Log.d("iPass", "Base tile cache hit");
+                }
+                else {
+                    InputStream stream=archive.getInputStream(load);
+                    if (stream!=null) {
+                        toScale=new BitmapDrawable(BitmapFactory.decodeStream(stream));
+                        cache.put(load, toScale);
+                    }
+                    else return null;
+                }
 
                 int o=256/(1<<dZoom);
                 toScale.setBounds(-offX*o, -offY*o, -offX*o+256, -offY*o+256);

@@ -6,6 +6,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.drawable.Drawable;
+import android.os.Handler;
 import android.support.v4.view.GestureDetectorCompat;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -16,6 +17,7 @@ import android.view.View;
 import android.widget.OverScroller;
 
 import java.io.File;
+import java.util.Map;
 
 import cz.easyosm.tile.MapTile;
 import cz.easyosm.tile.OfflineTileProvider;
@@ -29,6 +31,8 @@ import cz.easyosm.util.MyMath;
  * Created by martinjr on 3/24/14.
  */
 public class MapView extends View {
+    private static final int FRAMERATE=10;
+
     private OverScroller scroller;
     private ScaleGestureDetector scaleGestureDetector;
     private GestureDetectorCompat gestureDetector;
@@ -38,13 +42,14 @@ public class MapView extends View {
     private int x=0, y=0;
     private float zoomLevel=10;
 
-    private boolean isScaling=false;
+    private boolean isScaling=false,
+        isAnimating=false;
 
     private Paint textPaint, testPaint;
 
-    private int bgcolor=0xff00ff00;
-
     private Point focus;
+
+    private Handler animationHandler;
 
     public MapView(Context context) {
         super(context);
@@ -63,6 +68,7 @@ public class MapView extends View {
 
     private void init() {
         scroller=new OverScroller(getContext());
+        animationHandler=new Handler();
 
         testPaint=new Paint();
         testPaint.setColor(0xaa00FFFF);
@@ -80,13 +86,14 @@ public class MapView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        canvas.drawColor(bgcolor);
 
         drawTiles(canvas);
 
         canvas.drawText(String.format("x: %d; y: %d; z: %.3f", x, y, zoomLevel), 10, 40, textPaint);
 
         if (isScaling) canvas.drawCircle(focus.x, focus.y, 50, testPaint);
+
+        if (isAnimating) animationHandler.postDelayed(redraw, FRAMERATE);
     }
 
     private void drawTiles(Canvas canvas) {
@@ -172,12 +179,15 @@ public class MapView extends View {
         postInvalidate();
     }
 
+    private void applyAnimation(long milisElapsed) {
+
+    }
+
     private final ScaleGestureDetector.OnScaleGestureListener scaleGestureListener
             = new ScaleGestureDetector.SimpleOnScaleGestureListener() {
 
         @Override
         public boolean onScaleBegin(ScaleGestureDetector sgd) {
-            bgcolor=0xff0000ff;
             isScaling=true;
             postInvalidate();
             return true;
@@ -186,7 +196,7 @@ public class MapView extends View {
         @Override
         public boolean onScale(ScaleGestureDetector sgd) {
             double dz=sgd.getScaleFactor();
-            setZoomLevelFixing((float) (zoomLevel+MyMath.log2(dz)), (int)sgd.getFocusX(), (int)sgd.getFocusY());
+            setZoomLevelFixing((float) (zoomLevel+MyMath.log2(dz)), (int) sgd.getFocusX(), (int) sgd.getFocusY());
 
             focus.x=(int) sgd.getFocusX();
             focus.y=(int) sgd.getFocusY();
@@ -198,7 +208,6 @@ public class MapView extends View {
 
         @Override
         public void onScaleEnd(ScaleGestureDetector sgd) {
-            bgcolor=0xff00ff00;
             isScaling=false;
             postInvalidate();
         }
@@ -257,6 +266,20 @@ public class MapView extends View {
         public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
             scroller.fling(x, y, (int) -velocityX, (int) -velocityY, Integer.MIN_VALUE, Integer.MAX_VALUE, Integer.MIN_VALUE, Integer.MAX_VALUE);
             return true;
+        }
+    };
+
+    private Runnable redraw=new Runnable() {
+        private long prevTimeMilis;
+        @Override
+        public void run() {
+            long elapsed=System.currentTimeMillis()-prevTimeMilis;
+
+            applyAnimation(elapsed);
+
+            postInvalidate();
+
+            prevTimeMilis=System.currentTimeMillis();
         }
     };
 }
