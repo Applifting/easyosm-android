@@ -54,10 +54,10 @@ public class MBTilesArchive {
             if (cur.getCount() != 0) {
                 cur.moveToFirst();
                 ret = new ByteArrayInputStream(cur.getBlob(0));
-                Log.d("iPass", "Succesfuly fetched "+tile);
+//                Log.d("iPass", "Succesfuly fetched "+tile);
             }
             else {
-                Log.d("iPass", "Failed to fetch "+tile);
+//                Log.d("iPass", "Failed to fetch "+tile);
             }
 
             return ret;

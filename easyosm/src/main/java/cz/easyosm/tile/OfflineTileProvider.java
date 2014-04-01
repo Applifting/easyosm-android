@@ -46,10 +46,10 @@ public class OfflineTileProvider extends TileProviderBase {
         Drawable bd;
         if (cache.contains(tile)) {
             bd=cache.get(tile);
-            Log.d("iPass", "Direct cache hit: "+tile);
+//            Log.d("iPass", "Direct cache hit: "+tile);
         }
         else {
-            Log.d("iPass", "Fetching tile: "+tile);
+//            Log.d("iPass", "Fetching tile: "+tile);
             bd=fetchTile(tile);
             cache.put(tile, bd);
         }
@@ -96,7 +96,7 @@ public class OfflineTileProvider extends TileProviderBase {
                 return new BitmapDrawable(bitmap);
             }
             else { //scale up
-                Log.d("iPass", "Upscaling");
+//                Log.d("iPass", "Upscaling");
                 int dZoom=tile.zoom-maxDataLevel;
                 int newX=tile.x>>dZoom,
                         newY=tile.y>>dZoom,
@@ -108,7 +108,7 @@ public class OfflineTileProvider extends TileProviderBase {
                 Drawable toScale;
                 if (cache.contains(load)) {
                     toScale=cache.get(load);
-                    Log.d("iPass", "Base tile cache hit");
+//                    Log.d("iPass", "Base tile cache hit");
                 }
                 else {
                     InputStream stream=archive.getInputStream(load);

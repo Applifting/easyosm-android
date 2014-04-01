@@ -19,6 +19,8 @@ import android.widget.OverScroller;
 import java.io.File;
 import java.util.Map;
 
+import cz.easyosm.animation.MapAnimation;
+import cz.easyosm.animation.MapChoreographer;
 import cz.easyosm.tile.MapTile;
 import cz.easyosm.tile.OfflineTileProvider;
 import cz.easyosm.tile.OnlineTileProvider;
@@ -36,14 +38,14 @@ public class MapView extends View {
     private OverScroller scroller;
     private ScaleGestureDetector scaleGestureDetector;
     private GestureDetectorCompat gestureDetector;
+    private MapChoreographer choreographer;
 
     private TileProviderBase tileProvider;
 
     private int x=0, y=0;
     private float zoomLevel=10;
 
-    private boolean isScaling=false,
-        isAnimating=false;
+    private boolean isScaling=false;
 
     private Paint textPaint, testPaint;
 
@@ -81,6 +83,7 @@ public class MapView extends View {
 
         scaleGestureDetector = new ScaleGestureDetector(getContext(), scaleGestureListener);
         gestureDetector = new GestureDetectorCompat(getContext(), gestureListener);
+        choreographer=new MapChoreographer(this);
     }
 
     @Override
@@ -92,8 +95,6 @@ public class MapView extends View {
         canvas.drawText(String.format("x: %d; y: %d; z: %.3f", x, y, zoomLevel), 10, 40, textPaint);
 
         if (isScaling) canvas.drawCircle(focus.x, focus.y, 50, testPaint);
-
-        if (isAnimating) animationHandler.postDelayed(redraw, FRAMERATE);
     }
 
     private void drawTiles(Canvas canvas) {
@@ -179,8 +180,13 @@ public class MapView extends View {
         postInvalidate();
     }
 
-    private void applyAnimation(long milisElapsed) {
+    private void runAnimations() {
+        animationHandler.postDelayed(redraw, FRAMERATE);
+    }
 
+    private void applyAnimation() {
+        choreographer.applyTransformations();
+        invalidate();
     }
 
     private final ScaleGestureDetector.OnScaleGestureListener scaleGestureListener
@@ -189,7 +195,7 @@ public class MapView extends View {
         @Override
         public boolean onScaleBegin(ScaleGestureDetector sgd) {
             isScaling=true;
-            postInvalidate();
+            invalidate();
             return true;
         }
 
@@ -201,7 +207,7 @@ public class MapView extends View {
             focus.x=(int) sgd.getFocusX();
             focus.y=(int) sgd.getFocusY();
 
-            postInvalidate();
+            invalidate();
 
             return true;
         }
@@ -209,7 +215,7 @@ public class MapView extends View {
         @Override
         public void onScaleEnd(ScaleGestureDetector sgd) {
             isScaling=false;
-            postInvalidate();
+            invalidate();
         }
     };
 
@@ -249,7 +255,19 @@ public class MapView extends View {
 
         @Override
         public boolean onDoubleTap(MotionEvent e) {
-            setZoomLevel(zoomLevel-0.2f);
+            choreographer.runAnimation(new MapAnimation() {
+                private int elapsed=0;
+
+                @Override
+                public void applyTransformation(long milisElapsed) {
+                    Log.d("iPass", "apply: elapsed "+milisElapsed);
+                    setZoomLevel(zoomLevel+0.05f);
+                    elapsed+=milisElapsed;
+                    if (elapsed>1000) abort();
+                }
+            });
+            runAnimations();
+
             return true;
         }
 
@@ -258,7 +276,7 @@ public class MapView extends View {
             if (isScaling) return false;
             x+=distanceX;
             y+=distanceY;
-            postInvalidate();
+            invalidate();
             return true;
         }
 
@@ -270,16 +288,14 @@ public class MapView extends View {
     };
 
     private Runnable redraw=new Runnable() {
-        private long prevTimeMilis;
         @Override
         public void run() {
-            long elapsed=System.currentTimeMillis()-prevTimeMilis;
+            applyAnimation();
 
-            applyAnimation(elapsed);
-
-            postInvalidate();
-
-            prevTimeMilis=System.currentTimeMillis();
+            if (choreographer.isAnimating()) {
+                Log.d("iPass", "Schedule redraw");
+                animationHandler.postDelayed(redraw, FRAMERATE);
+            }
         }
     };
 }
