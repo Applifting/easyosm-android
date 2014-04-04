@@ -1,10 +1,12 @@
 package cz.easyosm.view;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Point;
+import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.os.Handler;
 import android.support.v4.view.GestureDetectorCompat;
@@ -17,10 +19,13 @@ import android.view.View;
 import android.widget.OverScroller;
 
 import java.io.File;
+import java.security.cert.LDAPCertStoreParameters;
+import java.util.HashMap;
 import java.util.Map;
 
 import cz.easyosm.animation.MapAnimation;
 import cz.easyosm.animation.MapChoreographer;
+import cz.easyosm.animation.TileFadeAnimation;
 import cz.easyosm.tile.MapTile;
 import cz.easyosm.tile.OfflineTileProvider;
 import cz.easyosm.tile.OnlineTileProvider;
@@ -33,14 +38,13 @@ import cz.easyosm.util.MyMath;
  * Created by martinjr on 3/24/14.
  */
 public class MapView extends View {
-    private static final int FRAMERATE=10;
-
     private OverScroller scroller;
     private ScaleGestureDetector scaleGestureDetector;
     private GestureDetectorCompat gestureDetector;
     private MapChoreographer choreographer;
 
     private TileProviderBase tileProvider;
+    private Map<MapTile, TileFadeAnimation> fades;
 
     private int x=0, y=0;
     private float zoomLevel=10;
@@ -52,6 +56,8 @@ public class MapView extends View {
     private Point focus;
 
     private Handler animationHandler;
+
+    private MapListener listener;
 
     public MapView(Context context) {
         super(context);
@@ -71,6 +77,7 @@ public class MapView extends View {
     private void init() {
         scroller=new OverScroller(getContext());
         animationHandler=new Handler();
+        fades=new HashMap<MapTile, TileFadeAnimation>();
 
         testPaint=new Paint();
         testPaint.setColor(0xaa00FFFF);
@@ -94,7 +101,7 @@ public class MapView extends View {
 
         canvas.drawText(String.format("x: %d; y: %d; z: %.3f", x, y, zoomLevel), 10, 40, textPaint);
 
-        if (isScaling) canvas.drawCircle(focus.x, focus.y, 50, testPaint);
+//        if (isScaling) canvas.drawCircle(focus.x, focus.y, 50, testPaint);
     }
 
     private void drawTiles(Canvas canvas) {
@@ -105,16 +112,41 @@ public class MapView extends View {
         double tileSize=TileMath.tileSize(256, zoomLevel);
 
         MapTile curr;
+        Rect tileRect=new Rect();
 
         for (int i=tl.y; i<=br.y; i++) {
             for (int j=tl.x; j<=br.x; j++) {
                 curr=new MapTile(j, i, (int) zoomLevel);
 
-                d=tileProvider.getTile(curr);
-
-                d.setBounds(MyMath.ceil(j*tileSize)-x, MyMath.ceil(i*tileSize)-y,
+                tileRect.set(MyMath.ceil(j*tileSize)-x, MyMath.ceil(i*tileSize)-y,
                         MyMath.ceil((j+1)*tileSize)-x, MyMath.ceil((i+1)*tileSize)-y);
-                d.draw(canvas);
+
+                if (fades.containsKey(curr)) {
+                    fades.get(curr).drawTile(canvas, tileRect);
+                }
+                else {
+                    d=tileProvider.getTile(curr);
+                    d.setBounds(tileRect);
+                    d.setAlpha(255);
+                    d.draw(canvas);
+
+//                    canvas.drawText(""+curr, tileRect.left+20, tileRect.top+20, textPaint);
+                }
+
+
+//                Paint p=new Paint();
+//                p.setColor(Color.BLACK);
+//                p.setTextSize(30);
+//
+//                canvas.drawLines(new float[] {
+//                        tileRect.left, tileRect.top,
+//                        tileRect.right, tileRect.top,
+//                        tileRect.right, tileRect.top,
+//                        tileRect.right, tileRect.bottom,
+//                        tileRect.right, tileRect.bottom,
+//                        tileRect.left, tileRect.bottom,
+//                        tileRect.left, tileRect.bottom,
+//                        tileRect.left, tileRect.top}, p);
             }
         }
     }
@@ -143,8 +175,42 @@ public class MapView extends View {
         super.onSizeChanged(w, h, oldw, oldh);
     }
 
+    /**
+     * Callback from another thread - will NOT run on UI thread
+     */
+    public void onTileLoaded(final MapTile tile, final Drawable original, final Drawable replace) {
+        animationHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                //Log.d("iPass", "Run tile fade for "+tile);
+                TileFadeAnimation fade=new TileFadeAnimation(fades, tile, original, replace);
+                choreographer.runAnimation(fade);
+            }
+        });
+//        onTileAnimationDone(tile, original, replace);
+//        postInvalidate();
+    }
+
+    public void onTileAnimationDone(MapTile tile, Drawable original, Drawable replace) {
+        tileProvider.onTileAnimationDone(tile, original, replace);
+    }
+
+    @Override
+    public void clearAnimation() {
+        super.clearAnimation();
+        fades.clear();
+    }
+
+    public int getOffsetX() {
+        return x;
+    }
+
+    public int getOffsetY() {
+        return y;
+    }
+
     public void setTileFile(File f) {
-        tileProvider=new OfflineTileProvider(f);
+        tileProvider=new OfflineTileProvider(this, f);
     }
 
     public void setTileURL(String url) {
@@ -162,6 +228,8 @@ public class MapView extends View {
         x=(int) ((x+fixX)*dz-fixX);
         y=(int) ((y+fixY)*dz-fixY);
 
+        if (listener!=null) listener.onZoom(newZoom);
+
         postInvalidate();
     }
 
@@ -172,7 +240,7 @@ public class MapView extends View {
     }
 
     public void setViewCenter(GeoPoint point) {
-        Point newCenter=TileMath.LatLongToPixelXY(point.getLat(), point.getLon(), zoomLevel, null);
+        Point newCenter=TileMath.LatLongToPixelXY(point.lat, point.lon, zoomLevel, null);
 
         x=newCenter.x-getWidth()/2;
         y=newCenter.y-getHeight()/2;
@@ -180,13 +248,8 @@ public class MapView extends View {
         postInvalidate();
     }
 
-    private void runAnimations() {
-        animationHandler.postDelayed(redraw, FRAMERATE);
-    }
-
-    private void applyAnimation() {
-        choreographer.applyTransformations();
-        invalidate();
+    public void setMapListener(MapListener listener) {
+        this.listener=listener;
     }
 
     private final ScaleGestureDetector.OnScaleGestureListener scaleGestureListener
@@ -256,17 +319,19 @@ public class MapView extends View {
         @Override
         public boolean onDoubleTap(MotionEvent e) {
             choreographer.runAnimation(new MapAnimation() {
-                private int elapsed=0;
+                private float originalZoom=zoomLevel;
+                private int duration=500, elapsed=0;
 
                 @Override
                 public void applyTransformation(long milisElapsed) {
-                    Log.d("iPass", "apply: elapsed "+milisElapsed);
-                    setZoomLevel(zoomLevel+0.05f);
+                    float add=((float)elapsed)/duration;
+                    Log.d("iPass", "Add "+add+" to zoomLevel");
+                    setZoomLevel(originalZoom+add);
+
                     elapsed+=milisElapsed;
-                    if (elapsed>1000) abort();
+                    if (elapsed>duration) abort();
                 }
             });
-            runAnimations();
 
             return true;
         }
@@ -287,15 +352,11 @@ public class MapView extends View {
         }
     };
 
-    private Runnable redraw=new Runnable() {
-        @Override
-        public void run() {
-            applyAnimation();
+    public float getZoomLevel() {
+        return zoomLevel;
+    }
 
-            if (choreographer.isAnimating()) {
-                Log.d("iPass", "Schedule redraw");
-                animationHandler.postDelayed(redraw, FRAMERATE);
-            }
-        }
-    };
+    public interface MapListener {
+        public void onZoom(float newZoom);
+    }
 }

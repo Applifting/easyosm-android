@@ -12,4 +12,9 @@ public class OnlineTileProvider extends TileProviderBase {
     public Drawable getTile(MapTile tile) {
         return null;
     }
+
+    @Override
+    public void onTileAnimationDone(MapTile tile, Drawable original, Drawable replace) {
+
+    }
 }

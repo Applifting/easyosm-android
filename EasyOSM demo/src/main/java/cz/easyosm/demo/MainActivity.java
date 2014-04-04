@@ -30,7 +30,7 @@ public class MainActivity extends ActionBarActivity {
         map.setZoomLevel(15);
         map.setViewCenter(home);
 
-        SeekBar zoom=(SeekBar)findViewById(R.id.zoom);
+        final SeekBar zoom=(SeekBar)findViewById(R.id.zoom);
         zoom.setMax(1000);
         zoom.setProgress(750);
         zoom.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -47,6 +47,12 @@ public class MainActivity extends ActionBarActivity {
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
 
+            }
+        });
+
+        map.setMapListener(new MapView.MapListener() {
+            @Override
+            public void onZoom(float newZoom) {
             }
         });
     }

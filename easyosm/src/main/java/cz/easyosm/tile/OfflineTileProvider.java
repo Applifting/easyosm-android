@@ -5,7 +5,6 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.Point;
 import android.graphics.Rect;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
@@ -13,10 +12,9 @@ import android.util.Log;
 
 import java.io.File;
 import java.io.InputStream;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
+
+import cz.easyosm.view.MapView;
 
 /**
  * Created by martinjr on 3/25/14.
@@ -25,14 +23,16 @@ public class OfflineTileProvider extends TileProviderBase {
     private File file;
 
     private MBTilesArchive archive;
+    private MapView parent;
 
     private TileCache cache;
 
-    public OfflineTileProvider(File f) {
+    public OfflineTileProvider(MapView parent, File f) {
         cache=new TileCache();
 
-        file=f;
-        archive=MBTilesArchive.getDatabaseFileArchive(f);
+        this.file=f;
+        this.archive=MBTilesArchive.getDatabaseFileArchive(f);
+        this.parent=parent;
     }
 
     public void setFile(File f) {
@@ -46,16 +46,176 @@ public class OfflineTileProvider extends TileProviderBase {
         Drawable bd;
         if (cache.contains(tile)) {
             bd=cache.get(tile);
-//            Log.d("iPass", "Direct cache hit: "+tile);
         }
         else {
-//            Log.d("iPass", "Fetching tile: "+tile);
-            bd=fetchTile(tile);
-            cache.put(tile, bd);
+            bd=makeUpTile(tile);
+            fetchTileAsync(tile, bd);
         }
 
         if (bd!=null) return bd;
+        else return blankTile(tile);
+    }
 
+    public void onTileAnimationDone(MapTile tile, Drawable original, Drawable replace) {
+        cache.put(tile, replace);
+    }
+
+    private Drawable makeUpTile(MapTile tile) {
+        MapTile aux;
+        MapTile[] aux2;
+
+        if (cache.contains(aux=tileToUpscale(tile, tile.zoom-1))) return scaleUpFromTile(tile, aux, cache.get(aux));
+
+        aux2=tilesToDownscale(tile, tile.zoom+1);
+        return scaleDownFromTiles(tile, aux2, cache.get(aux2));
+
+        //return blankTile(tile);
+    }
+    private void fetchTileAsync(MapTile tile, Drawable tmp) {
+        (new Thread(new DBTileLoader(tile, tmp))).start();
+    }
+
+    private class DBTileLoader implements Runnable {
+        private MapTile tile;
+        private Drawable tmp;
+
+        public DBTileLoader(MapTile toLoad, Drawable tmp) {
+            tile=toLoad;
+            this.tmp=tmp;
+        }
+
+        @Override
+        public void run() {
+            Drawable ret=fetchTile(tile);
+
+            if (ret!=null) {
+                parent.onTileLoaded(tile, tmp, ret);
+            }
+        }
+    }
+
+    private Drawable fetchTile(MapTile tile) {
+        if (minDataLevel<=tile.zoom && tile.zoom<=maxDataLevel) { // true data available
+            return getTileFromDb(tile);
+        }
+        else {
+            if (minDataLevel>tile.zoom) { // scale down
+                MapTile[] load=tilesToDownscale(tile, minDataLevel);
+
+                Drawable[] toScale=new Drawable[load.length];
+
+                for (int i=0; i<toScale.length; i++) {
+                    if (cache.contains(load[i])) toScale[i]=cache.get(load[i]);
+                    else toScale[i]=getTileFromDb(load[i]);
+                }
+
+                return scaleDownFromTiles(tile, load, toScale);
+            }
+            else { //scale up
+                MapTile load=tileToUpscale(tile, maxDataLevel);
+
+                Drawable toScale;
+                if (cache.contains(load)) {
+                    toScale=cache.get(load);
+                }
+                else {
+                    toScale=getTileFromDb(load);
+                    if (toScale==null) return null;
+                    else cache.put(load, toScale);
+                }
+
+                return scaleUpFromTile(tile, load, toScale);
+            }
+        }
+    }
+
+
+    private Drawable getTileFromDb(MapTile tile) {
+        InputStream stream=archive.getInputStream(tile);
+        if (stream!=null) return new BitmapDrawable(BitmapFactory.decodeStream(stream));
+        else return null;
+    }
+
+    private MapTile tileToUpscale(MapTile target, int baseZoom) {
+        int dZoom=target.zoom-baseZoom,
+            newX=target.x>>dZoom,
+            newY=target.y>>dZoom;
+
+        return new MapTile(newX, newY, baseZoom);
+    }
+
+    private Drawable scaleUpFromTile(MapTile target, MapTile base, Drawable baseDrawable) {
+        //Log.d("iPass", "Upscaling tile "+target+" from "+base);
+        int dZoom=target.zoom-base.zoom;
+        int tileSize=256/(1<<dZoom);
+        int offX=target.x-(base.x<<dZoom),
+                offY=target.y-(base.y<<dZoom);
+
+        baseDrawable.setBounds(-offX*tileSize, -offY*tileSize, -offX*tileSize+256, -offY*tileSize+256);
+
+        Bitmap bitmap = Bitmap.createBitmap(256, 256, Bitmap.Config.RGB_565);
+        Canvas canvas = new Canvas(bitmap);
+        canvas.scale(1<<dZoom, 1<<dZoom);
+
+        baseDrawable.draw(canvas);
+
+        return new BitmapDrawable(bitmap);
+    }
+
+    private MapTile[] tilesToDownscale(MapTile target, int baseZoom) {
+        int dZoom=baseZoom-target.zoom,
+                newX=target.x<<dZoom,
+                newY=target.y<<dZoom;
+        int inewX=newX;
+        int M=1<<dZoom, N=M*M;
+
+        MapTile[] ret=new MapTile[N];
+
+        for (int i=0; i<N; i++) {
+            ret[i]=new MapTile(inewX, newY, baseZoom);
+            inewX++;
+            if (inewX-newX>=M) {
+                inewX=newX;
+                newY++;
+            }
+        }
+
+        return ret;
+    }
+
+    private Drawable scaleDownFromTiles(MapTile target, MapTile[] bases, Drawable[] baseDrawables) {
+        int dZoom=bases[0].zoom-target.zoom;
+        int ix=0, iy=0;
+        int M=1<<dZoom, N=M*M;
+
+//        Log.d("iPass", "Downscaling: target zoom="+target.zoom+", base zoom="+bases[0].zoom+"; dZoom="+dZoom+", M="+M+", N="+N);
+
+        int tileSize=256/(1<<dZoom);
+
+        Bitmap b=Bitmap.createBitmap(256, 256, Bitmap.Config.RGB_565);
+        Canvas c=new Canvas(b);
+
+        c.drawColor(0xffbbbbbb);
+
+        for (int i=0; i<N; i++) {
+            if (baseDrawables[i]==null) continue;
+
+            baseDrawables[i].setBounds(ix*tileSize, iy*tileSize, (ix+1)*tileSize, (iy+1)*tileSize);
+//            Log.d("iPass", "Draw tile "+i+" to "+ix*tileSize+" "+iy*tileSize+" "+(ix+1)*tileSize+" "+(iy+1)*tileSize);
+            baseDrawables[i].setAlpha(255);
+            baseDrawables[i].draw(c);
+
+            ix++;
+            if (ix>=M) {
+                ix=0;
+                iy++;
+            }
+        }
+
+        return new BitmapDrawable(b);
+    }
+
+    private Drawable blankTile(MapTile tile) {
         Rect mTileRect=new Rect(0, 0, 255, 255);
         Paint p=new Paint();
         p.setColor(Color.BLACK);
@@ -66,70 +226,19 @@ public class OfflineTileProvider extends TileProviderBase {
 
         c.drawColor(0xffbbbbbb);
 
-        c.drawLines(new float[] {
-                    mTileRect.left, mTileRect.top,
-                    mTileRect.right, mTileRect.top,
-                    mTileRect.right, mTileRect.top,
-                    mTileRect.right, mTileRect.bottom,
-                    mTileRect.right, mTileRect.bottom,
-                    mTileRect.left, mTileRect.bottom,
-                    mTileRect.left, mTileRect.bottom,
-                    mTileRect.left, mTileRect.top}, p);
-
-        c.drawText(tile.x+":"+tile.y, 30, 128, p);
-        c.drawText(""+tile.zoom, 100, 170, p);
+//        c.drawLines(new float[] {
+//                mTileRect.left, mTileRect.top,
+//                mTileRect.right, mTileRect.top,
+//                mTileRect.right, mTileRect.top,
+//                mTileRect.right, mTileRect.bottom,
+//                mTileRect.right, mTileRect.bottom,
+//                mTileRect.left, mTileRect.bottom,
+//                mTileRect.left, mTileRect.bottom,
+//                mTileRect.left, mTileRect.top}, p);
+//
+//        c.drawText(tile.x+":"+tile.y, 30, 128, p);
+//        c.drawText(""+tile.zoom, 100, 170, p);
 
         return new BitmapDrawable(b);
-    }
-
-    private Drawable fetchTile(MapTile tile) {
-        if (minDataLevel<=tile.zoom && tile.zoom<=maxDataLevel) { // true data available
-            InputStream stream=archive.getInputStream(tile);
-            if (stream!=null) return new BitmapDrawable(BitmapFactory.decodeStream(stream));
-            else return null;
-        }
-        else {
-            if (minDataLevel>tile.zoom) { // TODO: scale down
-                Bitmap bitmap = Bitmap.createBitmap(256, 256, Bitmap.Config.RGB_565);
-                Canvas canvas = new Canvas(bitmap);
-                canvas.drawColor(Color.RED);
-                return new BitmapDrawable(bitmap);
-            }
-            else { //scale up
-//                Log.d("iPass", "Upscaling");
-                int dZoom=tile.zoom-maxDataLevel;
-                int newX=tile.x>>dZoom,
-                        newY=tile.y>>dZoom,
-                        offX=tile.x-(newX<<dZoom),
-                        offY=tile.y-(newY<<dZoom);
-
-                MapTile load=new MapTile(newX, newY, maxDataLevel);
-
-                Drawable toScale;
-                if (cache.contains(load)) {
-                    toScale=cache.get(load);
-//                    Log.d("iPass", "Base tile cache hit");
-                }
-                else {
-                    InputStream stream=archive.getInputStream(load);
-                    if (stream!=null) {
-                        toScale=new BitmapDrawable(BitmapFactory.decodeStream(stream));
-                        cache.put(load, toScale);
-                    }
-                    else return null;
-                }
-
-                int o=256/(1<<dZoom);
-                toScale.setBounds(-offX*o, -offY*o, -offX*o+256, -offY*o+256);
-
-                Bitmap bitmap = Bitmap.createBitmap(256, 256, Bitmap.Config.RGB_565);
-                Canvas canvas = new Canvas(bitmap);
-                canvas.scale(1<<dZoom, 1<<dZoom);
-
-                toScale.draw(canvas);
-
-                return new BitmapDrawable(bitmap);
-            }
-        }
     }
 }

@@ -13,6 +13,7 @@ public abstract class TileProviderBase {
     protected int minZoomLevel, maxZoomLevel, minDataLevel, maxDataLevel;
 
     public abstract Drawable getTile(MapTile tile);
+    public abstract void onTileAnimationDone(MapTile tile, Drawable original, Drawable replace);
 
     public void setZoomLimits(int minZoomLevel, int maxZoomLevel) {
         this.minZoomLevel=minZoomLevel;
