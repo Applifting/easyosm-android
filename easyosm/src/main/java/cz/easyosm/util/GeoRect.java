@@ -12,4 +12,15 @@ public class GeoRect {
         this.right=right;
         this.bottom=bottom;
     }
+
+    public GeoRect(GeoPoint tl, GeoPoint br) {
+        left=tl.lon;
+        top=tl.lat;
+        right=br.lon;
+        bottom=br.lat;
+    }
+
+    public boolean contains(GeoPoint p) {
+        return bottom<=p.lat && p.lat<=top && left<=p.lon && p.lon<=right;
+    }
 }

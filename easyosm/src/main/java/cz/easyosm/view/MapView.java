@@ -20,18 +20,23 @@ import android.widget.OverScroller;
 
 import java.io.File;
 import java.security.cert.LDAPCertStoreParameters;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 import cz.easyosm.animation.MapAnimation;
 import cz.easyosm.animation.MapChoreographer;
 import cz.easyosm.animation.TileFadeAnimation;
+import cz.easyosm.overlay.MapOverlayBase;
 import cz.easyosm.tile.MapTile;
 import cz.easyosm.tile.OfflineTileProvider;
 import cz.easyosm.tile.OnlineTileProvider;
 import cz.easyosm.tile.TileMath;
 import cz.easyosm.tile.TileProviderBase;
 import cz.easyosm.util.GeoPoint;
+import cz.easyosm.util.GeoRect;
 import cz.easyosm.util.MyMath;
 
 /**
@@ -45,6 +50,7 @@ public class MapView extends View {
 
     private TileProviderBase tileProvider;
     private Map<MapTile, TileFadeAnimation> fades;
+    private List<MapOverlayBase> overlays;
 
     private int x=0, y=0;
     private float zoomLevel=10;
@@ -57,7 +63,7 @@ public class MapView extends View {
 
     private Handler animationHandler;
 
-    private MapListener listener;
+    private List<MapListener> listeners;
 
     public MapView(Context context) {
         super(context);
@@ -78,9 +84,10 @@ public class MapView extends View {
         scroller=new OverScroller(getContext());
         animationHandler=new Handler();
         fades=new HashMap<MapTile, TileFadeAnimation>();
+        listeners=new LinkedList<MapListener>();
 
         testPaint=new Paint();
-        testPaint.setColor(0xaa00FFFF);
+        testPaint.setColor(0x55ffffff);
 
         textPaint=new Paint();
         textPaint.setTextSize(30);
@@ -91,6 +98,8 @@ public class MapView extends View {
         scaleGestureDetector = new ScaleGestureDetector(getContext(), scaleGestureListener);
         gestureDetector = new GestureDetectorCompat(getContext(), gestureListener);
         choreographer=new MapChoreographer(this);
+
+        overlays=new ArrayList<MapOverlayBase>(4);
     }
 
     @Override
@@ -99,7 +108,12 @@ public class MapView extends View {
 
         drawTiles(canvas);
 
-        canvas.drawText(String.format("x: %d; y: %d; z: %.3f", x, y, zoomLevel), 10, 40, textPaint);
+        for (MapOverlayBase overlay : overlays) {
+            overlay.onDraw(canvas);
+        }
+
+        canvas.drawRect(0f, 0f, (float)getWidth(), 40f, testPaint);
+        canvas.drawText(String.format("x: %d; y: %d; z: %.3f", x, y, zoomLevel), 10, 35, textPaint);
 
 //        if (isScaling) canvas.drawCircle(focus.x, focus.y, 50, testPaint);
     }
@@ -209,6 +223,10 @@ public class MapView extends View {
         return y;
     }
 
+    public MapChoreographer getChoreographer() {
+        return choreographer;
+    }
+
     public void setTileFile(File f) {
         tileProvider=new OfflineTileProvider(this, f);
     }
@@ -217,6 +235,9 @@ public class MapView extends View {
         tileProvider=new OnlineTileProvider();
     }
 
+    public float getZoomLevel() {
+        return zoomLevel;
+    }
     public void setZoomLevel(float newZoom) {
         setZoomLevelFixing(newZoom, getWidth()/2, getHeight()/2);
     }
@@ -228,7 +249,9 @@ public class MapView extends View {
         x=(int) ((x+fixX)*dz-fixX);
         y=(int) ((y+fixY)*dz-fixY);
 
-        if (listener!=null) listener.onZoom(newZoom);
+        for (MapListener listener : listeners) {
+            listener.onZoom(newZoom);
+        }
 
         postInvalidate();
     }
@@ -248,8 +271,20 @@ public class MapView extends View {
         postInvalidate();
     }
 
-    public void setMapListener(MapListener listener) {
-        this.listener=listener;
+    public GeoRect getViewGeoRect() {
+        GeoPoint tl, br;
+        tl=TileMath.PixelXYToLatLong(x, y, zoomLevel, null);
+        br=TileMath.PixelXYToLatLong(x+getWidth(), y+getHeight(), zoomLevel, null);
+
+        return new GeoRect(tl, br);
+    }
+
+    public void addOverlay(MapOverlayBase overlay) {
+        overlays.add(overlay);
+    }
+
+    public void addMapListener(MapListener listener) {
+        this.listeners.add(listener);
     }
 
     private final ScaleGestureDetector.OnScaleGestureListener scaleGestureListener
@@ -278,6 +313,11 @@ public class MapView extends View {
         @Override
         public void onScaleEnd(ScaleGestureDetector sgd) {
             isScaling=false;
+
+            for (MapListener listener : listeners) {
+                listener.onZoomFinished(zoomLevel);
+            }
+
             invalidate();
         }
     };
@@ -352,11 +392,9 @@ public class MapView extends View {
         }
     };
 
-    public float getZoomLevel() {
-        return zoomLevel;
-    }
-
     public interface MapListener {
         public void onZoom(float newZoom);
+
+        void onZoomFinished(float zoomLevel);
     }
 }

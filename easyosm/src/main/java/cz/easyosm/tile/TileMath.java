@@ -123,8 +123,7 @@ public class TileMath {
         final double latitude = 90 - 360 * Math.atan(Math.exp(-y * 2 * Math.PI)) / Math.PI;
         final double longitude = 360 * x;
 
-        out.setLat(latitude);
-        out.setLon(longitude);
+        out.set(latitude, longitude);
         return out;
     }
 

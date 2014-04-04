@@ -10,4 +10,9 @@ public class GeoPoint {
         this.lat=lat;
         this.lon=lon;
     }
+
+    public void set(double lat, double lon) {
+        this.lat=lat;
+        this.lon=lon;
+    }
 }
