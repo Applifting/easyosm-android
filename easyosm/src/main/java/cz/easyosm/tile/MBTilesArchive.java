@@ -25,12 +25,14 @@ public class MBTilesArchive {
     public final static String COL_TILES_TILE_ROW = "tile_row";
     public final static String COL_TILES_TILE_DATA = "tile_data";
 
+    private int minDataLevel=-1, maxDataLevel=-1;
+
     private MBTilesArchive(final SQLiteDatabase database) {
         db=database;
     }
 
     public static MBTilesArchive getDatabaseFileArchive(final File file) throws SQLiteException {
-        Log.d("iPass", "Opening file "+file.getAbsolutePath());
+        Log.d("easyosm", "Opening file "+file.getAbsolutePath());
         return new MBTilesArchive(
                 SQLiteDatabase.openDatabase(
                         file.getAbsolutePath(),
@@ -54,10 +56,10 @@ public class MBTilesArchive {
             if (cur.getCount() != 0) {
                 cur.moveToFirst();
                 ret = new ByteArrayInputStream(cur.getBlob(0));
-//                Log.d("iPass", "Succesfuly fetched "+tile);
+//                Log.d("easyosm", "Succesfuly fetched "+tile);
             }
             else {
-//                Log.d("iPass", "Failed to fetch "+tile);
+//                Log.d("easyosm", "Failed to fetch "+tile);
             }
 
             return ret;
@@ -68,6 +70,28 @@ public class MBTilesArchive {
         }
 
         return null;
+    }
+
+    public int getMinDataLevel() {
+        if (minDataLevel==-1) fetchDataLevels();
+
+        return minDataLevel;
+    }
+
+    public int getMaxDataLevel() {
+        if (maxDataLevel==-1) fetchDataLevels();
+
+        return maxDataLevel;
+    }
+
+    private void fetchDataLevels() {
+        Cursor cur = db.query(TABLE_TILES, new String[] {"min(zoom_level)", "max(zoom_level)"}, null, null, null, null, null);
+
+        if (cur.getCount() != 0) {
+            cur.moveToFirst();
+            minDataLevel=cur.getInt(0);
+            maxDataLevel=cur.getInt(1);
+        }
     }
 
     @Override

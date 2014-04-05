@@ -8,6 +8,7 @@ import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
+import android.os.Environment;
 import android.os.Handler;
 import android.support.v4.view.GestureDetectorCompat;
 import android.util.AttributeSet;
@@ -37,6 +38,7 @@ import cz.easyosm.tile.TileMath;
 import cz.easyosm.tile.TileProviderBase;
 import cz.easyosm.util.GeoPoint;
 import cz.easyosm.util.GeoRect;
+import cz.easyosm.util.MapCopier;
 import cz.easyosm.util.MyMath;
 
 /**
@@ -54,6 +56,7 @@ public class MapView extends View {
 
     private int x=0, y=0;
     private float zoomLevel=10;
+    private int minZoomLevel, maxZoomLevel;
 
     private boolean isScaling=false;
 
@@ -195,7 +198,7 @@ public class MapView extends View {
         animationHandler.post(new Runnable() {
             @Override
             public void run() {
-                //Log.d("iPass", "Run tile fade for "+tile);
+                //Log.d("easyosm", "Run tile fade for "+tile);
                 TileFadeAnimation fade=new TileFadeAnimation(fades, tile, original, replace);
                 choreographer.runAnimation(fade);
             }
@@ -212,18 +215,6 @@ public class MapView extends View {
     public void clearAnimation() {
         super.clearAnimation();
         fades.clear();
-    }
-
-    public int getOffsetX() {
-        return x;
-    }
-
-    public int getOffsetY() {
-        return y;
-    }
-
-    public MapChoreographer getChoreographer() {
-        return choreographer;
     }
 
     public void setTileFile(File f) {
@@ -255,10 +246,9 @@ public class MapView extends View {
         postInvalidate();
     }
 
-
-    public void setZoomLimits(int minZoomLevel, int maxZoomLevel, int minDataLevel, int maxDataLevel) {
-        tileProvider.setZoomLimits(minZoomLevel, maxZoomLevel);
-        tileProvider.setDataLimits(minDataLevel, maxDataLevel);
+    public void setZoomLimits(int minZoomLevel, int maxZoomLevel) {
+        this.minZoomLevel=minZoomLevel;
+        this.maxZoomLevel=maxZoomLevel;
     }
 
     public void setViewCenter(GeoPoint point) {
@@ -285,6 +275,19 @@ public class MapView extends View {
     public void addMapListener(MapListener listener) {
         this.listeners.add(listener);
     }
+
+    public int getOffsetX() {
+        return x;
+    }
+
+    public int getOffsetY() {
+        return y;
+    }
+
+    public MapChoreographer getChoreographer() {
+        return choreographer;
+    }
+
 
     private final ScaleGestureDetector.OnScaleGestureListener scaleGestureListener
             = new ScaleGestureDetector.SimpleOnScaleGestureListener() {
@@ -364,7 +367,7 @@ public class MapView extends View {
                 @Override
                 public void applyTransformation(long milisElapsed) {
                     float add=((float)elapsed)/duration;
-                    Log.d("iPass", "Add "+add+" to zoomLevel");
+                    Log.d("easyosm", "Add "+add+" to zoomLevel");
                     setZoomLevel(originalZoom+add);
 
                     elapsed+=milisElapsed;

@@ -42,7 +42,7 @@ public class OfflineTileProvider extends TileProviderBase {
 
     @Override
     public Drawable getTile(MapTile tile) {
-        //Log.d("iPass", "Get tile "+tile);
+        //Log.d("easyosm", "Get tile "+tile);
         Drawable bd;
         if (cache.contains(tile)) {
             bd=cache.get(tile);
@@ -58,6 +58,16 @@ public class OfflineTileProvider extends TileProviderBase {
 
     public void onTileAnimationDone(MapTile tile, Drawable original, Drawable replace) {
         cache.put(tile, replace);
+    }
+
+    @Override
+    public int getMinZoomLevel() {
+        return archive.getMinDataLevel();
+    }
+
+    @Override
+    public int getMaxZoomLevel() {
+        return archive.getMaxDataLevel();
     }
 
     private Drawable makeUpTile(MapTile tile) {
@@ -102,12 +112,12 @@ public class OfflineTileProvider extends TileProviderBase {
     }
 
     private Drawable fetchTile(MapTile tile) {
-        if (minDataLevel<=tile.zoom && tile.zoom<=maxDataLevel) { // true data available
+        if (getMinZoomLevel()<=tile.zoom && tile.zoom<=getMaxZoomLevel()) { // true data available
             return getTileFromDb(tile);
         }
         else {
-            if (minDataLevel>tile.zoom) { // scale down
-                MapTile[] load=tilesToDownscale(tile, minDataLevel);
+            if (getMinZoomLevel()>tile.zoom) { // scale down
+                MapTile[] load=tilesToDownscale(tile, getMinZoomLevel());
 
                 Drawable[] toScale=new Drawable[load.length];
 
@@ -119,7 +129,7 @@ public class OfflineTileProvider extends TileProviderBase {
                 return scaleDownFromTiles(tile, load, toScale);
             }
             else { //scale up
-                MapTile load=tileToUpscale(tile, maxDataLevel);
+                MapTile load=tileToUpscale(tile, getMaxZoomLevel());
 
                 Drawable toScale;
                 if (cache.contains(load)) {
@@ -154,7 +164,7 @@ public class OfflineTileProvider extends TileProviderBase {
     }
 
     private Drawable scaleUpFromTile(MapTile target, MapTile base, Drawable baseDrawable) {
-        //Log.d("iPass", "Upscaling tile "+target+" from "+base);
+        //Log.d("easyosm", "Upscaling tile "+target+" from "+base);
         int dZoom=target.zoom-base.zoom;
         int tileSize=256;
         int offX=target.x-(base.x<<dZoom),
@@ -203,7 +213,7 @@ public class OfflineTileProvider extends TileProviderBase {
         int ix=0, iy=0;
         int M=1<<dZoom, N=M*M;
 
-//        Log.d("iPass", "Downscaling: target zoom="+target.zoom+", base zoom="+bases[0].zoom+"; dZoom="+dZoom+", M="+M+", N="+N);
+//        Log.d("easyosm", "Downscaling: target zoom="+target.zoom+", base zoom="+bases[0].zoom+"; dZoom="+dZoom+", M="+M+", N="+N);
 
         int tileSize=256/(1<<dZoom);
 
@@ -214,11 +224,10 @@ public class OfflineTileProvider extends TileProviderBase {
 
         for (int i=0; i<N; i++) {
             if (baseDrawables[i]==null) continue;
-
+//            Log.d("easyosm", "Draw tile "+i+" to "+ix*tileSize+" "+iy*tileSize+" "+(ix+1)*tileSize+" "+(iy+1)*tileSize);
 
             synchronized (baseDrawables[i]) {
                 baseDrawables[i].setBounds(ix*tileSize, iy*tileSize, (ix+1)*tileSize, (iy+1)*tileSize);
-//                Log.d("iPass", "Draw tile "+i+" to "+ix*tileSize+" "+iy*tileSize+" "+(ix+1)*tileSize+" "+(iy+1)*tileSize);
                 baseDrawables[i].setAlpha(255);
                 baseDrawables[i].draw(c);
             }

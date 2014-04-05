@@ -40,7 +40,7 @@ public class TileFadeAnimation extends MapAnimation {
 
     @Override
     public void abort() {
-        //Log.d("iPass", "End tile fade for "+tile);
+        //Log.d("easyosm", "End tile fade for "+tile);
         fades.remove(tile);
         original.setAlpha(255);
         replace.setAlpha(255);

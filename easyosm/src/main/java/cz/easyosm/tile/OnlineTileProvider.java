@@ -17,4 +17,14 @@ public class OnlineTileProvider extends TileProviderBase {
     public void onTileAnimationDone(MapTile tile, Drawable original, Drawable replace) {
 
     }
+
+    @Override
+    public int getMinZoomLevel() {
+        return 0;
+    }
+
+    @Override
+    public int getMaxZoomLevel() {
+        return 0;
+    }
 }

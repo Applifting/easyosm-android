@@ -3,8 +3,10 @@ package cz.easyosm.demo;
 import android.os.Environment;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.ViewTreeObserver;
 
 import java.io.File;
 import java.util.LinkedList;
@@ -14,6 +16,7 @@ import cz.easyosm.overlay.location.LocationOverlay;
 import cz.easyosm.overlay.marker.Marker;
 import cz.easyosm.overlay.marker.MarkerOverlay;
 import cz.easyosm.util.GeoPoint;
+import cz.easyosm.util.MapCopier;
 import cz.easyosm.view.MapView;
 
 public class MainActivity extends ActionBarActivity {
@@ -29,13 +32,21 @@ public class MainActivity extends ActionBarActivity {
 
         getWindow().setBackgroundDrawable(null);
 
-        GeoPoint home=new GeoPoint(50.087, 14.420);
+        final GeoPoint home=new GeoPoint(50.0859031, 14.4181083);
+
+        MapCopier copier=new MapCopier(getResources(), R.raw.map, new File(Environment.getExternalStorageDirectory()+"/easyosm"), "map.example", new MapCopier.CopyProgressListener() {
+            @Override
+            public void onProgressUpdate(int percent) {
+                Log.d("iPass", "copy progress "+percent+"B");
+            }
+        });
+
+        if (copier.needsRunning()) copier.execute();
 
         map=(MapView) findViewById(R.id.map);
         map.setTileFile(new File(Environment.getExternalStorageDirectory().getPath()+"/osmdroid/map.mbtiles"));
-        map.setZoomLimits(10, 19, 13, 17);
+        map.setZoomLimits(10, 19);
         map.setZoomLevel(15);
-        map.setViewCenter(home);
 
         List<Marker> list=new LinkedList();
 
@@ -62,6 +73,16 @@ public class MainActivity extends ActionBarActivity {
 
             }
         });
+
+        ViewTreeObserver vto=map.getViewTreeObserver();
+        if (vto != null) {
+            vto.addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+                @Override
+                public void onGlobalLayout() { // will run once after the first layout
+                    map.setViewCenter(home);
+                }
+            });
+        }
     }
 
     @Override

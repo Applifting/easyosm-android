@@ -45,7 +45,7 @@ public class MapChoreographer {
         activeAnimations.remove(animation);
 
         if (!isAnimating()) {
-            Log.d("iPass", "Quit container animation");
+            Log.d("easyosm", "Quit container animation");
             parent.clearAnimation();
         }
     }
@@ -59,7 +59,7 @@ public class MapChoreographer {
     }
 
     public boolean isAnimating() {
-//        Log.d("iPass", "isAnimating: "+!activeAnimations.isEmpty());
+//        Log.d("easyosm", "isAnimating: "+!activeAnimations.isEmpty());
         return !activeAnimations.isEmpty();
     }
 
