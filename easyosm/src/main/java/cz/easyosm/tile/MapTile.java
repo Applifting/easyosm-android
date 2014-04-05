@@ -14,6 +14,12 @@ public class MapTile {
         this.zoom=zoom;
     }
 
+    public MapTile(MapTile original) {
+        this.x=original.x;
+        this.y=original.y;
+        this.zoom=original.zoom;
+    }
+
     @Override
     public String toString() {
         return "["+x+

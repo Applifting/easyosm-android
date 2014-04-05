@@ -150,7 +150,6 @@ public class MapView extends View {
 
 //                Paint p=new Paint();
 //                p.setColor(Color.BLACK);
-//                p.setTextSize(30);
 //
 //                canvas.drawLines(new float[] {
 //                        tileRect.left, tileRect.top,

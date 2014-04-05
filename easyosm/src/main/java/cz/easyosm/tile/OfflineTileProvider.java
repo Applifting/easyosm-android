@@ -71,6 +71,7 @@ public class OfflineTileProvider extends TileProviderBase {
 
         //return blankTile(tile);
     }
+
     private void fetchTileAsync(MapTile tile, Drawable tmp) {
         (new Thread(new DBTileLoader(tile, tmp))).start();
     }
@@ -87,6 +88,12 @@ public class OfflineTileProvider extends TileProviderBase {
         @Override
         public void run() {
             Drawable ret=fetchTile(tile);
+
+//            try {
+//                Thread.sleep(1000);
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
 
             if (ret!=null) {
                 parent.onTileLoaded(tile, tmp, ret);
@@ -136,6 +143,8 @@ public class OfflineTileProvider extends TileProviderBase {
         else return null;
     }
 
+//    private boolean justScaleUp()
+
     private MapTile tileToUpscale(MapTile target, int baseZoom) {
         int dZoom=target.zoom-baseZoom,
             newX=target.x>>dZoom,
@@ -147,17 +156,23 @@ public class OfflineTileProvider extends TileProviderBase {
     private Drawable scaleUpFromTile(MapTile target, MapTile base, Drawable baseDrawable) {
         //Log.d("iPass", "Upscaling tile "+target+" from "+base);
         int dZoom=target.zoom-base.zoom;
-        int tileSize=256/(1<<dZoom);
+        int tileSize=256;
         int offX=target.x-(base.x<<dZoom),
                 offY=target.y-(base.y<<dZoom);
 
-        baseDrawable.setBounds(-offX*tileSize, -offY*tileSize, -offX*tileSize+256, -offY*tileSize+256);
-
         Bitmap bitmap = Bitmap.createBitmap(256, 256, Bitmap.Config.RGB_565);
         Canvas canvas = new Canvas(bitmap);
-        canvas.scale(1<<dZoom, 1<<dZoom);
 
-        baseDrawable.draw(canvas);
+        synchronized (baseDrawable) {
+            baseDrawable.setBounds(-offX*tileSize, -offY*tileSize, -offX*tileSize+(256 << dZoom), -offY*tileSize+(256 << dZoom));
+            baseDrawable.draw(canvas);
+        }
+
+//        Paint p=new Paint();
+//        p.setColor(Color.BLACK);
+//        p.setTextSize(20);
+//        canvas.drawText(target.x+":"+target.y, 30, 128, p);
+//        canvas.drawText(""+target.zoom, 100, 170, p);
 
         return new BitmapDrawable(bitmap);
     }
@@ -200,10 +215,13 @@ public class OfflineTileProvider extends TileProviderBase {
         for (int i=0; i<N; i++) {
             if (baseDrawables[i]==null) continue;
 
-            baseDrawables[i].setBounds(ix*tileSize, iy*tileSize, (ix+1)*tileSize, (iy+1)*tileSize);
-//            Log.d("iPass", "Draw tile "+i+" to "+ix*tileSize+" "+iy*tileSize+" "+(ix+1)*tileSize+" "+(iy+1)*tileSize);
-            baseDrawables[i].setAlpha(255);
-            baseDrawables[i].draw(c);
+
+            synchronized (baseDrawables[i]) {
+                baseDrawables[i].setBounds(ix*tileSize, iy*tileSize, (ix+1)*tileSize, (iy+1)*tileSize);
+//                Log.d("iPass", "Draw tile "+i+" to "+ix*tileSize+" "+iy*tileSize+" "+(ix+1)*tileSize+" "+(iy+1)*tileSize);
+                baseDrawables[i].setAlpha(255);
+                baseDrawables[i].draw(c);
+            }
 
             ix++;
             if (ix>=M) {
@@ -226,16 +244,6 @@ public class OfflineTileProvider extends TileProviderBase {
 
         c.drawColor(0xffbbbbbb);
 
-//        c.drawLines(new float[] {
-//                mTileRect.left, mTileRect.top,
-//                mTileRect.right, mTileRect.top,
-//                mTileRect.right, mTileRect.top,
-//                mTileRect.right, mTileRect.bottom,
-//                mTileRect.right, mTileRect.bottom,
-//                mTileRect.left, mTileRect.bottom,
-//                mTileRect.left, mTileRect.bottom,
-//                mTileRect.left, mTileRect.top}, p);
-//
 //        c.drawText(tile.x+":"+tile.y, 30, 128, p);
 //        c.drawText(""+tile.zoom, 100, 170, p);
 

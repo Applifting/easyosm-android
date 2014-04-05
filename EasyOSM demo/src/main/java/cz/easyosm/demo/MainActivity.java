@@ -5,15 +5,22 @@ import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.SeekBar;
 
 import java.io.File;
+import java.util.LinkedList;
+import java.util.List;
 
+import cz.easyosm.overlay.location.LocationOverlay;
+import cz.easyosm.overlay.marker.Marker;
+import cz.easyosm.overlay.marker.MarkerOverlay;
 import cz.easyosm.util.GeoPoint;
 import cz.easyosm.view.MapView;
 
 public class MainActivity extends ActionBarActivity {
     private MapView map;
+
+    private MarkerOverlay markers;
+    private LocationOverlay location;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -30,33 +37,44 @@ public class MainActivity extends ActionBarActivity {
         map.setZoomLevel(15);
         map.setViewCenter(home);
 
-        final SeekBar zoom=(SeekBar)findViewById(R.id.zoom);
-        zoom.setMax(1000);
-        zoom.setProgress(750);
-        zoom.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                map.setZoomLevel(progress/50f);
-            }
+        List<Marker> list=new LinkedList();
 
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
+        list.add(new Marker(new GeoPoint(50.0876850, 14.4210361)));
+        list.add(new Marker(new GeoPoint(50.0862617, 14.4161050)));
+        list.add(new Marker(new GeoPoint(50.0909300, 14.4161600)));
+        list.add(new Marker(new GeoPoint(50.0870928, 14.4070786)));
+        list.add(new Marker(new GeoPoint(50.0847550, 14.4178567)));
 
-            }
+        markers=new MarkerOverlay(map);
+        markers.addMarkers(list);
+        map.addOverlay(markers);
 
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
+        location=new LocationOverlay(map);
+        map.addOverlay(location);
 
-            }
-        });
-
-        map.setMapListener(new MapView.MapListener() {
+        map.addMapListener(new MapView.MapListener() {
             @Override
             public void onZoom(float newZoom) {
+            }
+
+            @Override
+            public void onZoomFinished(float zoomLevel) {
+
             }
         });
     }
 
+    @Override
+    protected void onPause() {
+        super.onPause();
+        location.enableLocation(false);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        location.enableLocation(true);
+    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
