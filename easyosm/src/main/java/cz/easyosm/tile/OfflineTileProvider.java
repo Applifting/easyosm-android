@@ -8,11 +8,19 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.os.*;
+import android.os.Process;
 import android.util.Log;
 
 import java.io.File;
 import java.io.InputStream;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
+import java.util.Queue;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import cz.easyosm.view.MapView;
 
@@ -27,8 +35,16 @@ public class OfflineTileProvider extends TileProviderBase {
 
     private TileCache cache;
 
+    private MapTile aux;
+    private MapTile[] aux2;
+
+    private ThreadPoolExecutor executor;
+    private Queue<Runnable> toRun;
+
     public OfflineTileProvider(MapView parent, File f) {
         cache=new TileCache();
+        executor=new ThreadPoolExecutor(3, 3, 1, TimeUnit.SECONDS, new LinkedBlockingDeque<Runnable>());
+        toRun=new LinkedList<Runnable>();
 
         this.file=f;
         this.archive=MBTilesArchive.getDatabaseFileArchive(f);
@@ -57,7 +73,7 @@ public class OfflineTileProvider extends TileProviderBase {
     }
 
     public void onTileAnimationDone(MapTile tile, Drawable original, Drawable replace) {
-        cache.put(tile, replace);
+        cache.put(tile, replace, 10);
     }
 
     @Override
@@ -71,9 +87,6 @@ public class OfflineTileProvider extends TileProviderBase {
     }
 
     private Drawable makeUpTile(MapTile tile) {
-        MapTile aux;
-        MapTile[] aux2;
-
         if (cache.contains(aux=tileToUpscale(tile, tile.zoom-1))) return scaleUpFromTile(tile, aux, cache.get(aux));
 
         aux2=tilesToDownscale(tile, tile.zoom+1);
@@ -83,7 +96,13 @@ public class OfflineTileProvider extends TileProviderBase {
     }
 
     private void fetchTileAsync(MapTile tile, Drawable tmp) {
-        (new Thread(new DBTileLoader(tile, tmp))).start();
+        toRun.add(new DBTileLoader(tile, tmp));
+    }
+
+    public void runAsyncTasks() {
+        while (!toRun.isEmpty()) {
+            executor.execute(toRun.poll());
+        }
     }
 
     private class DBTileLoader implements Runnable {
@@ -97,13 +116,9 @@ public class OfflineTileProvider extends TileProviderBase {
 
         @Override
         public void run() {
-            Drawable ret=fetchTile(tile);
+            android.os.Process.setThreadPriority(Process.THREAD_PRIORITY_LESS_FAVORABLE);
 
-//            try {
-//                Thread.sleep(1000);
-//            } catch (InterruptedException e) {
-//                e.printStackTrace();
-//            }
+            Drawable ret=fetchTile(tile);
 
             if (ret!=null) {
                 parent.onTileLoaded(tile, tmp, ret);
@@ -138,7 +153,7 @@ public class OfflineTileProvider extends TileProviderBase {
                 else {
                     toScale=getTileFromDb(load);
                     if (toScale==null) return null;
-                    else cache.put(load, toScale);
+                    else cache.put(load, toScale, 10);
                 }
 
                 return scaleUpFromTile(tile, load, toScale);
@@ -184,7 +199,10 @@ public class OfflineTileProvider extends TileProviderBase {
 //        canvas.drawText(target.x+":"+target.y, 30, 128, p);
 //        canvas.drawText(""+target.zoom, 100, 170, p);
 
-        return new BitmapDrawable(bitmap);
+        BitmapDrawable ret=new BitmapDrawable(bitmap);
+        cache.put(target, ret, 10-dZoom);
+
+        return ret;
     }
 
     private MapTile[] tilesToDownscale(MapTile target, int baseZoom) {
@@ -215,12 +233,12 @@ public class OfflineTileProvider extends TileProviderBase {
 
 //        Log.d("easyosm", "Downscaling: target zoom="+target.zoom+", base zoom="+bases[0].zoom+"; dZoom="+dZoom+", M="+M+", N="+N);
 
-        int tileSize=256/(1<<dZoom);
+        int tileSize=256>>dZoom;
 
-        Bitmap b=Bitmap.createBitmap(256, 256, Bitmap.Config.RGB_565);
-        Canvas c=new Canvas(b);
+        Bitmap bitmap=Bitmap.createBitmap(256, 256, Bitmap.Config.RGB_565);
+        Canvas canvas=new Canvas(bitmap);
 
-        c.drawColor(0xffbbbbbb);
+        canvas.drawColor(0xffbbbbbb);
 
         for (int i=0; i<N; i++) {
             if (baseDrawables[i]==null) continue;
@@ -229,7 +247,7 @@ public class OfflineTileProvider extends TileProviderBase {
             synchronized (baseDrawables[i]) {
                 baseDrawables[i].setBounds(ix*tileSize, iy*tileSize, (ix+1)*tileSize, (iy+1)*tileSize);
                 baseDrawables[i].setAlpha(255);
-                baseDrawables[i].draw(c);
+                baseDrawables[i].draw(canvas);
             }
 
             ix++;
@@ -239,7 +257,10 @@ public class OfflineTileProvider extends TileProviderBase {
             }
         }
 
-        return new BitmapDrawable(b);
+        BitmapDrawable ret=new BitmapDrawable(bitmap);
+        cache.put(target, ret, 10-dZoom);
+
+        return ret;
     }
 
     private Drawable blankTile(MapTile tile) {

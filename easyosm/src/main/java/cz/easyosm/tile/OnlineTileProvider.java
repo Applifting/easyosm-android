@@ -19,6 +19,11 @@ public class OnlineTileProvider extends TileProviderBase {
     }
 
     @Override
+    public void runAsyncTasks() {
+
+    }
+
+    @Override
     public int getMinZoomLevel() {
         return 0;
     }

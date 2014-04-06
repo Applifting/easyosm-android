@@ -13,6 +13,8 @@ public abstract class TileProviderBase {
     public abstract Drawable getTile(MapTile tile);
     public abstract void onTileAnimationDone(MapTile tile, Drawable original, Drawable replace);
 
+    public abstract void runAsyncTasks();
+
     public abstract int getMinZoomLevel();
     public abstract int getMaxZoomLevel();
 

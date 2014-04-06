@@ -48,4 +48,10 @@ public class MapTile {
         result=31*result+zoom;
         return result;
     }
+
+    public void set(int newX, int newY, int newZoom) {
+        x=newX;
+        y=newY;
+        zoom=newZoom;
+    }
 }

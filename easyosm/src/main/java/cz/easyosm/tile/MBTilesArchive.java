@@ -56,10 +56,6 @@ public class MBTilesArchive {
             if (cur.getCount() != 0) {
                 cur.moveToFirst();
                 ret = new ByteArrayInputStream(cur.getBlob(0));
-//                Log.d("easyosm", "Succesfuly fetched "+tile);
-            }
-            else {
-//                Log.d("easyosm", "Failed to fetch "+tile);
             }
 
             return ret;

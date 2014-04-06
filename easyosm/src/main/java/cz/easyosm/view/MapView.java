@@ -118,6 +118,8 @@ public class MapView extends View {
         canvas.drawRect(0f, 0f, (float)getWidth(), 40f, testPaint);
         canvas.drawText(String.format("x: %d; y: %d; z: %.3f", x, y, zoomLevel), 10, 35, textPaint);
 
+        tileProvider.runAsyncTasks();
+
 //        if (isScaling) canvas.drawCircle(focus.x, focus.y, 50, testPaint);
     }
 
