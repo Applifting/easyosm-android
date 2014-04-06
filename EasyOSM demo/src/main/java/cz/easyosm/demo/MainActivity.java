@@ -45,16 +45,19 @@ public class MainActivity extends ActionBarActivity {
 
         map=(MapView) findViewById(R.id.map);
         map.setTileFile(new File(Environment.getExternalStorageDirectory().getPath()+"/osmdroid/map.mbtiles"));
-        map.setZoomLimits(10, 19);
+        map.setZoomLimits(13, 19);
         map.setZoomLevel(15);
 
         List<Marker> list=new LinkedList();
 
-        list.add(new Marker(new GeoPoint(50.0876850, 14.4210361)));
-        list.add(new Marker(new GeoPoint(50.0862617, 14.4161050)));
-        list.add(new Marker(new GeoPoint(50.0909300, 14.4161600)));
-        list.add(new Marker(new GeoPoint(50.0870928, 14.4070786)));
-        list.add(new Marker(new GeoPoint(50.0847550, 14.4178567)));
+        list.add(new Marker(new GeoPoint(50.0876850, 14.4210361), 1));
+        list.add(new Marker(new GeoPoint(50.0862617, 14.4161050), 2));
+        list.add(new Marker(new GeoPoint(50.0909300, 14.4161600), 3));
+        list.add(new Marker(new GeoPoint(50.0870928, 14.4070786), 4));
+        list.add(new Marker(new GeoPoint(50.0847550, 14.4178567), 5));
+        list.add(new Marker(new GeoPoint(50.0871742, 14.4205253), 6));
+        list.add(new Marker(new GeoPoint(50.0868592, 14.4222694), 7));
+        list.add(new Marker(new GeoPoint(50.0872314, 14.4211814), 8));
 
         markers=new MarkerOverlay(map);
         markers.addMarkers(list);

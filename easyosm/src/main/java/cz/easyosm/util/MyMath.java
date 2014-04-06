@@ -1,5 +1,7 @@
 package cz.easyosm.util;
 
+import android.graphics.Point;
+
 import java.util.Arrays;
 
 /**
@@ -25,6 +27,10 @@ public class MyMath {
 
     public static double pow2(double x) {
         return Math.pow(2, x);
+    }
+
+    public static float euclidDist(Point a, Point b) {
+        return (float) Math.sqrt((a.x-b.x)*(a.x-b.x)+(a.y-b.y)*(a.y-b.y));
     }
 
     /**

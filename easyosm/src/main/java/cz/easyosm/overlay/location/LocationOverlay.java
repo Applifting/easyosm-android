@@ -66,4 +66,19 @@ public class LocationOverlay extends MapOverlayBase {
         Point p=getPoint(new GeoPoint(location.getLatitude(), location.getLongitude()));
         c.drawCircle(p.x, p.y, 10, paint);
     }
+
+    @Override
+    public boolean onSingleTap(Point touch) {
+        return false;
+    }
+
+    @Override
+    public boolean onDoubleTap(Point touch) {
+        return false;
+    }
+
+    @Override
+    public void onLongPress(Point touch) {
+
+    }
 }

@@ -56,7 +56,7 @@ public class MapView extends View {
 
     private int x=0, y=0;
     private float zoomLevel=10;
-    private int minZoomLevel, maxZoomLevel;
+    private int minZoomLevel=0, maxZoomLevel=Integer.MAX_VALUE;
 
     private boolean isScaling=false;
 
@@ -228,11 +228,14 @@ public class MapView extends View {
     public float getZoomLevel() {
         return zoomLevel;
     }
+
     public void setZoomLevel(float newZoom) {
         setZoomLevelFixing(newZoom, getWidth()/2, getHeight()/2);
     }
 
     public void setZoomLevelFixing(float newZoom, int fixX, int fixY) {
+        if (newZoom>maxZoomLevel || newZoom<minZoomLevel) return;
+
         double dz=MyMath.pow2(newZoom-zoomLevel);
 
         zoomLevel=newZoom;
@@ -339,7 +342,10 @@ public class MapView extends View {
 
         @Override
         public void onLongPress(MotionEvent e) {
-
+            Point touch=new Point((int)e.getRawX(), (int) e.getRawY());
+            for (MapOverlayBase overlay : overlays) {
+                overlay.onLongPress(touch);
+            }
         }
 
         @Override
@@ -354,12 +360,25 @@ public class MapView extends View {
 
         @Override
         public boolean onSingleTapConfirmed(MotionEvent e) {
-            setZoomLevel(zoomLevel+0.02f);
-            return true;
+            boolean consumed=false;
+            Point touch=new Point((int)e.getRawX(), (int) e.getRawY());
+            for (MapOverlayBase overlay : overlays) {
+                consumed|=overlay.onSingleTap(touch);
+            }
+
+            return consumed;
         }
 
         @Override
         public boolean onDoubleTap(MotionEvent e) {
+            boolean consumed=false;
+            Point touch=new Point((int)e.getRawX(), (int) e.getRawY());
+            for (MapOverlayBase overlay : overlays) {
+                consumed|=overlay.onDoubleTap(touch);
+            }
+
+            if (consumed) return true;
+
             choreographer.runAnimation(new MapAnimation() {
                 private float originalZoom=zoomLevel;
                 private int duration=500, elapsed=0;

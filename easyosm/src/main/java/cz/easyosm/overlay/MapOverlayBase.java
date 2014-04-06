@@ -14,6 +14,10 @@ import cz.easyosm.view.MapView;
 public abstract class MapOverlayBase {
     public abstract void onDraw(Canvas c);
 
+    public abstract boolean onSingleTap(Point touch);
+    public abstract boolean onDoubleTap(Point touch);
+    public abstract void onLongPress(Point touch);
+
     protected MapView parent;
 
     public MapOverlayBase(MapView parent) {
@@ -71,4 +75,5 @@ public abstract class MapOverlayBase {
 
         return r;
     }
+
 }

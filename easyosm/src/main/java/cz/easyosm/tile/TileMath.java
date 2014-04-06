@@ -188,4 +188,11 @@ public class TileMath {
 
         return (float) ((int)zoomIn+MyMath.log2(newSize/tileSize));
     }
+
+    public static double pointDistancePx(GeoPoint a, GeoPoint b, float zoomLevel) {
+        Point p1=LatLongToPixelXY(a.lat, a.lon, zoomLevel, null);
+        Point p2=LatLongToPixelXY(b.lat, b.lon, zoomLevel, null);
+
+        return MyMath.euclidDist(p1,p2);
+    }
 }

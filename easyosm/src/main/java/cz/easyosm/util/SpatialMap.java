@@ -1,12 +1,13 @@
 package cz.easyosm.util;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 /**
  * Created by martinjr on 4/4/14.
  */
-public class SpatialMap<T extends Placeable> {
+public class SpatialMap<T extends Placeable> implements Iterable<T> {
     private List<T> points;
 
     public SpatialMap() {
@@ -34,5 +35,29 @@ public class SpatialMap<T extends Placeable> {
 
     public void remove(T point) {
         points.remove(point);
+    }
+
+    public void clear() {
+        points.clear();
+    }
+
+    @Override
+    public Iterator<T> iterator() {
+        return new Iterator<T>() {
+            private int i=0;
+
+            @Override
+            public boolean hasNext() {
+                return i<points.size();
+            }
+
+            @Override
+            public T next() {
+                return points.get(i++);
+            }
+
+            @Override
+            public void remove() {}
+        };
     }
 }
