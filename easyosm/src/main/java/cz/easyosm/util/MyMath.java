@@ -33,6 +33,12 @@ public class MyMath {
         return (float) Math.sqrt((a.x-b.x)*(a.x-b.x)+(a.y-b.y)*(a.y-b.y));
     }
 
+    public static int clip(int x, int min, int max) {
+        if (x<min) return min;
+        else if (x>max) return max;
+        else return x;
+    }
+
     /**
      * Compute a median of the first 'length' values of an array of floats
      * @param values

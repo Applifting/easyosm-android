@@ -1,5 +1,10 @@
 package cz.easyosm.util;
 
+import android.graphics.Point;
+import android.graphics.Rect;
+
+import cz.easyosm.tile.TileMath;
+
 /**
  * Created by martinjr on 4/4/14.
  */
@@ -22,5 +27,20 @@ public class GeoRect {
 
     public boolean contains(GeoPoint p) {
         return bottom<=p.lat && p.lat<=top && left<=p.lon && p.lon<=right;
+    }
+
+    public Rect toMap(float zoomLevel, Rect reuse) {
+        Point p;
+        Rect ret=(reuse==null)?new Rect():reuse;
+
+        p=TileMath.LatLongToPixelXY(left, top, zoomLevel, null);
+        ret.left=p.x;
+        ret.top=p.y;
+
+        p=TileMath.LatLongToPixelXY(right, bottom, zoomLevel, p);
+        ret.right=p.x;
+        ret.bottom=p.y;
+
+        return ret;
     }
 }

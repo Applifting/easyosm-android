@@ -16,6 +16,7 @@ import cz.easyosm.overlay.location.LocationOverlay;
 import cz.easyosm.overlay.marker.Marker;
 import cz.easyosm.overlay.marker.MarkerOverlay;
 import cz.easyosm.util.GeoPoint;
+import cz.easyosm.util.GeoRect;
 import cz.easyosm.util.MapCopier;
 import cz.easyosm.view.MapView;
 
@@ -46,6 +47,7 @@ public class MainActivity extends ActionBarActivity {
         map=(MapView) findViewById(R.id.map);
         map.setTileFile(new File(Environment.getExternalStorageDirectory().getPath()+"/osmdroid/map.mbtiles"));
         map.setZoomLimits(13, 19);
+        map.setBounds(new GeoRect(50.1140122, 14.3720592, 50.0638497, 14.4552053));
         map.setZoomLevel(15);
 
         List<Marker> list=new LinkedList();
@@ -83,6 +85,7 @@ public class MainActivity extends ActionBarActivity {
                 @Override
                 public void onGlobalLayout() { // will run once after the first layout
                     map.setViewCenter(home);
+                    map.resetOverscroll();
                 }
             });
         }
