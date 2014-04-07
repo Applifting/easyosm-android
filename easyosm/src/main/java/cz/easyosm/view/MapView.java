@@ -293,7 +293,6 @@ public class MapView extends View {
         return choreographer;
     }
 
-
     private final ScaleGestureDetector.OnScaleGestureListener scaleGestureListener
             = new ScaleGestureDetector.SimpleOnScaleGestureListener() {
 

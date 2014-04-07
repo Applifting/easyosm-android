@@ -87,12 +87,18 @@ public class OfflineTileProvider extends TileProviderBase {
     }
 
     private Drawable makeUpTile(MapTile tile) {
-        if (cache.contains(aux=tileToUpscale(tile, tile.zoom-1))) return scaleUpFromTile(tile, aux, cache.get(aux));
-
-        aux2=tilesToDownscale(tile, tile.zoom+1);
-        return scaleDownFromTiles(tile, aux2, cache.get(aux2));
-
-        //return blankTile(tile);
+        Drawable d;
+        if (cache.contains(aux=tileToUpscale(tile, tile.zoom-1))) {
+            d=new UpscaleTileDrawable(tile, aux, cache.get(aux));
+            cache.put(tile, d, 0);
+            return d;
+        }
+        else {
+            aux2=tilesToDownscale(tile, tile.zoom+1);
+            d=new DownscaleTileDrawable(tile, aux2, cache.get(aux2));
+            cache.put(tile, d, 0);
+            return d;
+        }
     }
 
     private void fetchTileAsync(MapTile tile, Drawable tmp) {
@@ -137,8 +143,7 @@ public class OfflineTileProvider extends TileProviderBase {
                 Drawable[] toScale=new Drawable[load.length];
 
                 for (int i=0; i<toScale.length; i++) {
-                    if (cache.contains(load[i])) toScale[i]=cache.get(load[i]);
-                    else toScale[i]=getTileFromDb(load[i]);
+                    toScale[i]=retrieveTile(load[i]);
                 }
 
                 return scaleDownFromTiles(tile, load, toScale);
@@ -146,18 +151,21 @@ public class OfflineTileProvider extends TileProviderBase {
             else { //scale up
                 MapTile load=tileToUpscale(tile, getMaxZoomLevel());
 
-                Drawable toScale;
-                if (cache.contains(load)) {
-                    toScale=cache.get(load);
-                }
-                else {
-                    toScale=getTileFromDb(load);
-                    if (toScale==null) return null;
-                    else cache.put(load, toScale, 10);
-                }
-
-                return scaleUpFromTile(tile, load, toScale);
+                return scaleUpFromTile(tile, load, retrieveTile(load));
             }
+        }
+    }
+
+    private Drawable retrieveTile(MapTile tile) {
+        Drawable ret;
+        if (cache.containsTrue(tile)) {
+            ret=cache.get(tile);
+            return ret;
+        }
+        else {
+            ret=getTileFromDb(tile);
+            if (ret!=null)  cache.put(tile, ret, 10);
+            return ret;
         }
     }
 
@@ -168,8 +176,6 @@ public class OfflineTileProvider extends TileProviderBase {
         else return null;
     }
 
-//    private boolean justScaleUp()
-
     private MapTile tileToUpscale(MapTile target, int baseZoom) {
         int dZoom=target.zoom-baseZoom,
             newX=target.x>>dZoom,
@@ -179,7 +185,6 @@ public class OfflineTileProvider extends TileProviderBase {
     }
 
     private Drawable scaleUpFromTile(MapTile target, MapTile base, Drawable baseDrawable) {
-        //Log.d("easyosm", "Upscaling tile "+target+" from "+base);
         int dZoom=target.zoom-base.zoom;
         int tileSize=256;
         int offX=target.x-(base.x<<dZoom),
@@ -190,19 +195,11 @@ public class OfflineTileProvider extends TileProviderBase {
 
         synchronized (baseDrawable) {
             baseDrawable.setBounds(-offX*tileSize, -offY*tileSize, -offX*tileSize+(256 << dZoom), -offY*tileSize+(256 << dZoom));
+            baseDrawable.setAlpha(255);
             baseDrawable.draw(canvas);
         }
 
-//        Paint p=new Paint();
-//        p.setColor(Color.BLACK);
-//        p.setTextSize(20);
-//        canvas.drawText(target.x+":"+target.y, 30, 128, p);
-//        canvas.drawText(""+target.zoom, 100, 170, p);
-
-        BitmapDrawable ret=new BitmapDrawable(bitmap);
-        cache.put(target, ret, 10-dZoom);
-
-        return ret;
+        return new BitmapDrawable(bitmap);
     }
 
     private MapTile[] tilesToDownscale(MapTile target, int baseZoom) {
@@ -231,8 +228,6 @@ public class OfflineTileProvider extends TileProviderBase {
         int ix=0, iy=0;
         int M=1<<dZoom, N=M*M;
 
-//        Log.d("easyosm", "Downscaling: target zoom="+target.zoom+", base zoom="+bases[0].zoom+"; dZoom="+dZoom+", M="+M+", N="+N);
-
         int tileSize=256>>dZoom;
 
         Bitmap bitmap=Bitmap.createBitmap(256, 256, Bitmap.Config.RGB_565);
@@ -242,7 +237,6 @@ public class OfflineTileProvider extends TileProviderBase {
 
         for (int i=0; i<N; i++) {
             if (baseDrawables[i]==null) continue;
-//            Log.d("easyosm", "Draw tile "+i+" to "+ix*tileSize+" "+iy*tileSize+" "+(ix+1)*tileSize+" "+(iy+1)*tileSize);
 
             synchronized (baseDrawables[i]) {
                 baseDrawables[i].setBounds(ix*tileSize, iy*tileSize, (ix+1)*tileSize, (iy+1)*tileSize);
@@ -257,10 +251,7 @@ public class OfflineTileProvider extends TileProviderBase {
             }
         }
 
-        BitmapDrawable ret=new BitmapDrawable(bitmap);
-        cache.put(target, ret, 10-dZoom);
-
-        return ret;
+        return new BitmapDrawable(bitmap);
     }
 
     private Drawable blankTile(MapTile tile) {

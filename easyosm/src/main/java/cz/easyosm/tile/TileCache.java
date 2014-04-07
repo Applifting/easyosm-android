@@ -38,10 +38,14 @@ public class TileCache {
         return ret;
     }
 
+    public boolean containsTrue(MapTile tile) {
+        return cache.containsKey(tile) && cache.get(tile).quality>0;
+    }
+
     public void put(MapTile tile, Drawable drawable, int quality) {
         if (cache.containsKey(tile)) {
             QualityAwareDrawable cached=cache.get(tile);
-            if (cached.quality<quality) {
+            if (cached.quality<=quality) {
                 cached.drawable=drawable;
                 cached.quality=quality;
             }
@@ -50,7 +54,8 @@ public class TileCache {
     }
 
     public Drawable get(MapTile tile) {
-        return cache.get(tile).drawable;
+        if (!cache.containsKey(tile)) return null;
+        else return cache.get(tile).drawable;
     }
 
     public Drawable[] get(MapTile[] tiles) {
