@@ -13,7 +13,9 @@ import java.util.LinkedList;
 import java.util.List;
 
 import cz.easyosm.overlay.location.LocationOverlay;
+import cz.easyosm.overlay.marker.Cluster;
 import cz.easyosm.overlay.marker.Marker;
+import cz.easyosm.overlay.marker.MarkerBase;
 import cz.easyosm.overlay.marker.MarkerOverlay;
 import cz.easyosm.util.GeoPoint;
 import cz.easyosm.util.GeoRect;
@@ -24,6 +26,8 @@ public class MainActivity extends ActionBarActivity {
     private MapView map;
 
     private MarkerOverlay markers;
+    private MarkerBase activeMarker;
+
     private LocationOverlay location;
 
     @Override
@@ -64,6 +68,50 @@ public class MainActivity extends ActionBarActivity {
         markers=new MarkerOverlay(map);
         markers.addMarkers(list);
         map.addOverlay(markers);
+
+        markers.setListener(
+                new MarkerOverlay.MarkerListener() {
+                    @Override
+                    public boolean onMarkerTap(Marker m) {
+                        if (activeMarker!=null) markers.animateMarkerState(activeMarker, Marker.STATE_NORMAL);
+
+                        markers.animateMarkerState(m, Marker.STATE_ACTIVE);
+                        activeMarker=m;
+
+                        return true;
+                    }
+
+                    @Override
+                    public boolean onClusterTap(Cluster c) {
+                        if (activeMarker!=null) markers.animateMarkerState(activeMarker, Marker.STATE_NORMAL);
+
+                        markers.animateMarkerState(c, Cluster.STATE_ACTIVE);
+                        activeMarker=c;
+
+                        return true;
+                    }
+
+                    @Override
+                    public boolean onMarkerDoubleTap(Marker m) {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean onClusterDoubleTap(Cluster c) {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean onMarkerLongPress(Marker m) {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean onClusterLongPress(Cluster c) {
+                        return false;
+                    }
+                }
+        );
 
         location=new LocationOverlay(map);
         map.addOverlay(location);

@@ -19,7 +19,6 @@ public class TileFadeAnimation extends MapAnimation {
     private Drawable original, replace;
 
     private int alpha=0;
-    private int duration=250, elapsed=0;
 
     public TileFadeAnimation(Map<MapTile, TileFadeAnimation> fades, MapTile tile, Drawable original, Drawable replace) {
         this.fades=fades;
@@ -31,23 +30,23 @@ public class TileFadeAnimation extends MapAnimation {
     }
 
     @Override
-    public void applyTransformation(long milisElapsed) {
-        alpha=(int) (255*((float)elapsed/duration));
-        elapsed+=milisElapsed;
-
-        if (elapsed>duration) abort();
+    public void init() {
+        setDuration(250);
     }
 
     @Override
-    public void abort() {
+    public void applyTransformation(float interpolated, long milisElapsed) {
+        alpha=(int) (255*((float)elapsed/duration));
+    }
+
+    @Override
+    public void end() {
         //Log.d("easyosm", "End tile fade for "+tile);
         fades.remove(tile);
         original.setAlpha(255);
         replace.setAlpha(255);
 
         choreographer.parent.onTileAnimationDone(tile, original, replace);
-
-        super.abort();
     }
 
     public void drawTile(Canvas c, Rect target) {

@@ -16,7 +16,7 @@ public abstract class MapOverlayBase {
 
     public abstract boolean onSingleTap(Point touch);
     public abstract boolean onDoubleTap(Point touch);
-    public abstract void onLongPress(Point touch);
+    public abstract boolean onLongPress(Point touch);
 
     protected MapView parent;
 

@@ -14,6 +14,9 @@ import cz.easyosm.util.GeoPoint;
  * Created by martinjr on 4/4/14.
  */
 public class Cluster extends MarkerBase {
+    public static final int STATE_NORMAL=0,
+        STATE_ACTIVE=1;
+
     private static Paint paint=new Paint();
     private static Paint textPaint=new Paint();
 
@@ -57,7 +60,37 @@ public class Cluster extends MarkerBase {
 
     @Override
     public void onDraw(Canvas canvas, Point p) {
-        canvas.drawCircle(p.x, p.y, 20, paint);
-        canvas.drawText(String.valueOf(markers.size()), p.x, p.y+5, textPaint);
+        canvas.save();
+        canvas.translate(p.x, p.y);
+        if (currentTransition!=null && currentTransition.active) drawTransition(canvas, currentTransition);
+        else drawState(canvas, state);
+        canvas.restore();
+    }
+
+    protected void drawTransition(Canvas canvas, MarkerTransition transition) {
+        if (transition.stateFrom==STATE_NORMAL && transition.stateTo==STATE_ACTIVE) {
+            canvas.drawCircle(0, 0, 20+10*transition.transition, paint);
+            canvas.drawText(""+markers.size(), 0, 0, textPaint);
+        }
+        else if (transition.stateFrom==STATE_ACTIVE && transition.stateTo==STATE_NORMAL) {
+            canvas.drawCircle(0, 0, 30-10*transition.transition, paint);
+            canvas.drawText(""+markers.size(), 0, 0, textPaint);
+        }
+    }
+
+    protected void drawState(Canvas canvas, int state) {
+        if (state==STATE_NORMAL) {
+            canvas.drawCircle(0, 0, 20, paint);
+            canvas.drawText(""+markers.size(), 0, 0, textPaint);
+        }
+        else if (state==STATE_ACTIVE) {
+            canvas.drawCircle(0, 0, 30, paint);
+            canvas.drawText(""+markers.size(), 0, 0, textPaint);
+        }
+    }
+
+    @Override
+    public boolean isCluster() {
+        return true;
     }
 }

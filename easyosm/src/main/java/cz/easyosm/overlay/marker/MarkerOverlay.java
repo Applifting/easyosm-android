@@ -7,6 +7,7 @@ import android.util.Log;
 import java.util.ArrayList;
 import java.util.List;
 
+import cz.easyosm.animation.MarkerTransitionAnimation;
 import cz.easyosm.overlay.MapOverlayBase;
 import cz.easyosm.tile.TileMath;
 import cz.easyosm.util.MyMath;
@@ -40,8 +41,11 @@ public class MarkerOverlay extends MapOverlayBase implements MapView.MapListener
     public boolean onSingleTap(Point touch) {
         for (MarkerBase marker : clustered) {
             if (MyMath.euclidDist(getPoint(marker.getPoint()), touch)<16) {
-                if (listener!=null) return listener.onMarkerTap(marker);
-                else return false;
+                if (listener==null) return false;
+                else {
+                    if (marker.isCluster()) return listener.onClusterTap((Cluster) marker);
+                    else return listener.onMarkerTap((Marker) marker);
+                }
             }
         }
         return false;
@@ -51,25 +55,42 @@ public class MarkerOverlay extends MapOverlayBase implements MapView.MapListener
     public boolean onDoubleTap(Point touch) {
         for (MarkerBase marker : clustered) {
             if (MyMath.euclidDist(getPoint(marker.getPoint()), touch)<16) {
-                if (listener!=null) return listener.onMarkerDoubleTap(marker);
-                else return false;
+                if (listener==null) return false;
+                else {
+                    if (marker.isCluster()) return listener.onClusterDoubleTap((Cluster) marker);
+                    else return listener.onMarkerDoubleTap((Marker) marker);
+                }
             }
         }
         return false;
     }
 
     @Override
-    public void onLongPress(Point touch) {
+    public boolean onLongPress(Point touch) {
         for (MarkerBase marker : clustered) {
             if (MyMath.euclidDist(getPoint(marker.getPoint()), touch)<16) {
-                if (listener!=null) listener.onMarkerLongPress(marker);
+                if (listener==null) return false;
+                else {
+                    if (marker.isCluster()) return listener.onClusterLongPress((Cluster) marker);
+                    else return listener.onMarkerLongPress((Marker) marker);
+                }
             }
         }
+
+        return false;
     }
 
     public void addMarkers(List<Marker> addMarkers) {
         markers.addAll(addMarkers);
         recluster(parent.getZoomLevel());
+    }
+
+    public void setMarkerState(MarkerBase m, int state) {
+        m.setState(state);
+    }
+
+    public void animateMarkerState(MarkerBase m, int state) {
+        parent.getChoreographer().runAnimation(new MarkerTransitionAnimation(m, state));
     }
 
     @Override
@@ -152,9 +173,13 @@ public class MarkerOverlay extends MapOverlayBase implements MapView.MapListener
     }
 
     public interface MarkerListener {
-        public boolean onMarkerTap(MarkerBase m);
-        public boolean onMarkerDoubleTap(MarkerBase m);
-        public boolean onMarkerLongPress(MarkerBase m);
+        public boolean onMarkerTap(Marker m);
+        public boolean onClusterTap(Cluster c);
 
+        public boolean onMarkerDoubleTap(Marker m);
+        public boolean onClusterDoubleTap(Cluster c);
+
+        public boolean onMarkerLongPress(Marker m);
+        public boolean onClusterLongPress(Cluster c);
     }
 }

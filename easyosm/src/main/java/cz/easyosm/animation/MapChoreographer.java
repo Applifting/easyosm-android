@@ -38,6 +38,7 @@ public class MapChoreographer {
         }
 
         animation.setChoreographer(this);
+        animation.init();
         activeAnimations.add(animation);
     }
 
@@ -52,8 +53,8 @@ public class MapChoreographer {
 
     public void applyTransformations() {
         for (MapAnimation animation : activeAnimations) {
-            animation.applyTransformation(getTime()-prevTimeMilis);
-            }
+            animation.frame(getTime()-prevTimeMilis);
+        }
 
         prevTimeMilis=getTime();
     }

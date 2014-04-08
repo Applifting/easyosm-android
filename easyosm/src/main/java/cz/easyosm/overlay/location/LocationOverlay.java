@@ -78,7 +78,7 @@ public class LocationOverlay extends MapOverlayBase {
     }
 
     @Override
-    public void onLongPress(Point touch) {
-
+    public boolean onLongPress(Point touch) {
+        return false;
     }
 }

@@ -17,6 +17,7 @@ import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.OverScroller;
 
 import java.io.File;
@@ -129,8 +130,6 @@ public class MapView extends View {
         canvas.drawText(String.format("x: %d; y: %d; z: %.3f", x, y, zoomLevel), 10, 35, textPaint);
 
         tileProvider.runAsyncTasks();
-
-//        if (isScaling) canvas.drawCircle(focus.x, focus.y, 50, testPaint);
     }
 
     private void drawTiles(Canvas canvas) {
@@ -210,7 +209,7 @@ public class MapView extends View {
     }
 
     /**
-     * Callback from another thread - will NOT run on the UI thread
+     * Callback from tile loading thread - will NOT run on the UI thread! Post UI changes to the UI thread.
      */
     public void onTileLoaded(final MapTile tile, final Drawable original, final Drawable replace) {
         animationHandler.post(new Runnable() {
@@ -322,16 +321,12 @@ public class MapView extends View {
 
         x=MyMath.clip(nx, bounds.left, bounds.right-getWidth());
         y=MyMath.clip(ny, bounds.top, bounds.bottom-getHeight());
-        Log.d("easyosm", "bound view to "+bounds);
-        Log.d("easyosm", nx+":"+ny+" == "+x+":"+y);
 
         if (x==nx && y==ny) {
             if (overscrollX!=0 || overscrollY!=0) releaseOverscroll();
             return true;
         }
         else {
-            Log.d("easyosm", "OVERSCROLL");
-
             if (!scroller.isFinished()) { // fling in progress
                 scroller.abortAnimation();
                 overscrollFling(x-nx, y-ny);
@@ -410,7 +405,7 @@ public class MapView extends View {
 
         @Override
         public void onLongPress(MotionEvent e) {
-            Point touch=new Point((int)e.getRawX(), (int) e.getRawY());
+            Point touch=new Point((int)e.getX(), (int) e.getY());
             for (MapOverlayBase overlay : overlays) {
                 overlay.onLongPress(touch);
             }
@@ -429,7 +424,7 @@ public class MapView extends View {
         @Override
         public boolean onSingleTapConfirmed(MotionEvent e) {
             boolean consumed=false;
-            Point touch=new Point((int)e.getRawX(), (int) e.getRawY());
+            Point touch=new Point((int)e.getX(), (int) e.getY());
             for (MapOverlayBase overlay : overlays) {
                 consumed|=overlay.onSingleTap(touch);
             }
@@ -440,7 +435,7 @@ public class MapView extends View {
         @Override
         public boolean onDoubleTap(MotionEvent e) {
             boolean consumed=false;
-            Point touch=new Point((int)e.getRawX(), (int) e.getRawY());
+            Point touch=new Point((int)e.getX(), (int) e.getY());
             for (MapOverlayBase overlay : overlays) {
                 consumed|=overlay.onDoubleTap(touch);
             }
@@ -449,16 +444,19 @@ public class MapView extends View {
 
             choreographer.runAnimation(new MapAnimation() {
                 private float originalZoom=zoomLevel;
-                private int duration=500, elapsed=0;
 
                 @Override
-                public void applyTransformation(long milisElapsed) {
-                    float add=((float)elapsed)/duration;
-                    setZoomLevel(originalZoom+add);
-
-                    elapsed+=milisElapsed;
-                    if (elapsed>duration) abort();
+                public void init() {
+                    setDuration(500);
                 }
+
+                @Override
+                public void applyTransformation(float interpolated, long milisElapsed) {
+                    setZoomLevel(originalZoom+interpolated);
+                }
+
+                @Override
+                public void end() {}
             });
 
             return true;
@@ -488,41 +486,54 @@ public class MapView extends View {
     }
 
     private class ReleaseOverscrollAnimation extends MapAnimation {
-        long duration=500;
+        double duration=500;
 
         double dX=-overscrollX/duration;
         double dY=-overscrollY/duration;
 
         @Override
-        public void applyTransformation(long milisElapsed) {
+        public void init() {}
+
+        @Override
+        public void applyTransformation(float interpolated, long milisElapsed) {
             overscrollX=(overscrollX*dX<0) ? (int) (overscrollX+milisElapsed*dX) : 0;
             overscrollY=(overscrollY*dY<0) ? (int) (overscrollY+milisElapsed*dY) : 0;
 
             if (overscrollX==0 && overscrollY==0) abort();
         }
+
+        @Override
+        public void end() {}
     }
 
     private class FlingOverscrollAnimation extends MapAnimation {
-        long duration=50, elapsed=0;
-
         double dX, dY;
+        double baseOverscrollX, baseOverscrollY;
 
         public FlingOverscrollAnimation(int difx, int dify) {
-            dX=5.*difx/duration;
-            dY=5.*dify/duration;
+            dX=5.*difx;
+            dY=5.*dify;
+
+            baseOverscrollX=overscrollX;
+            baseOverscrollY=overscrollY;
         }
 
         @Override
-        public void applyTransformation(long milisElapsed) {
-            overscrollX=(int) (overscrollX+milisElapsed*dX);
-            overscrollY=(int) (overscrollY+milisElapsed*dY);
+        public void init() {
 
-            elapsed+=milisElapsed;
+            setDuration(75);
+            setInterpolator(new DecelerateInterpolator());
+        }
 
-            if (elapsed>=duration) {
-                abort();
-                releaseOverscroll();
-            }
+        @Override
+        public void applyTransformation(float interpolated, long milisElapsed) {
+            overscrollX=baseOverscrollX+interpolated*dX;
+            overscrollY=baseOverscrollY+interpolated*dY;
+        }
+
+        @Override
+        public void end() {
+            releaseOverscroll();
         }
     }
 }
