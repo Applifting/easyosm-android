@@ -590,6 +590,10 @@ public class MapView extends View {
         }
     };
 
+    public void clearCache() {
+        tileProvider.clearCache();
+    }
+
     public interface MapListener {
         public void onZoom(float newZoom);
         public void onZoomFinished(float zoomLevel);

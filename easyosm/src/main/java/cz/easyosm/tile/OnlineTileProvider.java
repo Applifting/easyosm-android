@@ -32,4 +32,9 @@ public class OnlineTileProvider extends TileProviderBase {
     public int getMaxZoomLevel() {
         return 0;
     }
+
+    @Override
+    public void clearCache() {
+
+    }
 }

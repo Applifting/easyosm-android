@@ -86,6 +86,11 @@ public class OfflineTileProvider extends TileProviderBase {
         return archive.getMaxDataLevel();
     }
 
+    @Override
+    public void clearCache() {
+        cache.clear();
+    }
+
     private Drawable makeUpTile(MapTile tile) {
         Drawable d;
         if (cache.contains(aux=tileToUpscale(tile, tile.zoom-1))) {

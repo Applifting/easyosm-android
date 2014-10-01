@@ -18,4 +18,5 @@ public abstract class TileProviderBase {
     public abstract int getMinZoomLevel();
     public abstract int getMaxZoomLevel();
 
+    public abstract void clearCache();
 }
