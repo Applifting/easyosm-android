@@ -4,8 +4,12 @@ import android.graphics.Canvas;
 import android.graphics.Point;
 import android.graphics.Rect;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import cz.easyosm.tile.TileMath;
 import cz.easyosm.util.GeoPoint;
+import cz.easyosm.util.Icon;
 import cz.easyosm.view.MapView;
 
 /**
@@ -20,8 +24,11 @@ public abstract class MapOverlayBase {
 
     protected MapView parent;
 
+    private Map<Integer, Icon> icons;
+
     public MapOverlayBase(MapView parent) {
         this.parent=parent;
+        this.icons=new HashMap<Integer, Icon>();
     }
 
     /**
@@ -76,4 +83,21 @@ public abstract class MapOverlayBase {
         return r;
     }
 
+    /**
+     * Get icon drawable
+     * @return
+     */
+    protected Icon getIcon(int resource) {
+        Icon drawable;
+        if (icons.containsKey(resource)) drawable=icons.get(resource);
+        else {
+            drawable=new Icon();
+            drawable.image=parent.getResources().getDrawable(resource);
+            drawable.hotspot.x=0;
+
+            icons.put(resource, drawable);
+        }
+
+        return drawable;
+    }
 }

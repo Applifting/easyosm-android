@@ -20,6 +20,7 @@ import cz.easyosm.view.MapView;
 public class MarkerOverlay extends MapOverlayBase implements MapView.MapListener {
     private List<Marker> markers;
     private SpatialMap<MarkerBase> clustered;
+    private ClusterFactory cf=new ClusterFactory();
 
     private MarkerListener listener;
 
@@ -103,14 +104,19 @@ public class MarkerOverlay extends MapOverlayBase implements MapView.MapListener
         recluster(zoomLevel);
     }
 
+    @Override
+    public boolean onMapTap() {
+        return false;
+    }
+
     private void recluster(float zoomLevel) {
         Log.d("easyosm", "Reclustering to "+zoomLevel);
-        int markerHeight=32;
+        int markerHeight=30;
 
         Marker a, b;
         Cluster mc=null;
 
-        int magicalBound=(int) (markerHeight*0.8); // permit 10% overlap
+        int magicalBound=(int) (markerHeight*0.9); // permit 10% overlap
 
         // reset all markers
         for (Marker m : markers) {
@@ -152,7 +158,7 @@ public class MarkerOverlay extends MapOverlayBase implements MapView.MapListener
 
                 if (TileMath.pointDistancePx(a.getPoint(), b.getPoint(), zoomLevel)<magicalBound) {
 //                    Log.d("iPass", "merge to a new cluster");
-                    mc=new Cluster(a, b);
+                    mc=cf.newCluster(a, b);
                     clustered.add(mc);
                 }
             }
@@ -170,6 +176,15 @@ public class MarkerOverlay extends MapOverlayBase implements MapView.MapListener
 
     public void setListener(MarkerListener listener) {
         this.listener=listener;
+    }
+
+    public void clearMarkers() {
+        markers.clear();
+        recluster(parent.getZoomLevel());
+    }
+
+    public void setClusterFactory(ClusterFactory cf) {
+        this.cf=cf;
     }
 
     public interface MarkerListener {

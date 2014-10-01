@@ -4,10 +4,8 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Point;
-import android.util.Log;
 
 import cz.easyosm.util.GeoPoint;
-import cz.easyosm.util.Placeable;
 
 /**
  * Created by martinjr on 4/4/14.
@@ -33,7 +31,7 @@ public class Marker extends MarkerBase {
     private boolean clusterable=true;
 
     public Marker(GeoPoint point) {
-        this.point=point;
+        this(point, -1);
     }
 
     public Marker(GeoPoint point, int id) {

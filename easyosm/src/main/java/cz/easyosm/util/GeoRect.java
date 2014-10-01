@@ -11,7 +11,7 @@ import cz.easyosm.tile.TileMath;
 public class GeoRect {
     public double left, top, right, bottom;
 
-    public GeoRect(double left, double top, double right, double bottom) {
+    public GeoRect(double top, double left, double bottom, double right) {
         this.left=left;
         this.top=top;
         this.right=right;
@@ -33,14 +33,24 @@ public class GeoRect {
         Point p;
         Rect ret=(reuse==null)?new Rect():reuse;
 
-        p=TileMath.LatLongToPixelXY(left, top, zoomLevel, null);
+        p=TileMath.LatLongToPixelXY(top, left, zoomLevel, null);
         ret.left=p.x;
         ret.top=p.y;
 
-        p=TileMath.LatLongToPixelXY(right, bottom, zoomLevel, p);
+        p=TileMath.LatLongToPixelXY(bottom, right, zoomLevel, p);
         ret.right=p.x;
         ret.bottom=p.y;
 
         return ret;
+    }
+
+    @Override
+    public String toString() {
+        return "GeoRect{"+
+                "left="+left+
+                ", top="+top+
+                ", right="+right+
+                ", bottom="+bottom+
+                '}';
     }
 }
