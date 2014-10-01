@@ -8,15 +8,12 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
-import android.os.*;
 import android.os.Process;
 import android.util.Log;
 
 import java.io.File;
 import java.io.InputStream;
 import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -41,6 +38,8 @@ public class OfflineTileProvider extends TileProviderBase {
     private ThreadPoolExecutor executor;
     private Queue<Runnable> toRun;
 
+    private BitmapDrawable blank;
+
     public OfflineTileProvider(MapView parent, File f) {
         cache=new TileCache();
         executor=new ThreadPoolExecutor(3, 3, 1, TimeUnit.SECONDS, new LinkedBlockingDeque<Runnable>());
@@ -52,13 +51,14 @@ public class OfflineTileProvider extends TileProviderBase {
     }
 
     public void setFile(File f) {
+        Log.d("iPass", "Loaded file "+f.getAbsolutePath());
         file=f;
         archive=MBTilesArchive.getDatabaseFileArchive(f);
     }
 
     @Override
     public Drawable getTile(MapTile tile) {
-        //Log.d("easyosm", "Get tile "+tile);
+//        Log.d("easyosm", "Get tile "+tile);
         Drawable bd;
         if (cache.contains(tile)) {
             bd=cache.get(tile);
@@ -160,10 +160,12 @@ public class OfflineTileProvider extends TileProviderBase {
         Drawable ret;
         if (cache.containsTrue(tile)) {
             ret=cache.get(tile);
+//            Log.d("iPass", "cache hit");
             return ret;
         }
         else {
             ret=getTileFromDb(tile);
+//            Log.d("iPass", "got "+ret+" from db");
             if (ret!=null)  cache.put(tile, ret, 10);
             return ret;
         }
@@ -173,7 +175,10 @@ public class OfflineTileProvider extends TileProviderBase {
     private Drawable getTileFromDb(MapTile tile) {
         InputStream stream=archive.getInputStream(tile);
         if (stream!=null) return new BitmapDrawable(BitmapFactory.decodeStream(stream));
-        else return null;
+        else {
+            Log.d("iPass", "ERROR: tile "+tile+" not in DB!");
+            return blankTile(tile);
+        }
     }
 
     private MapTile tileToUpscale(MapTile target, int baseZoom) {
@@ -185,6 +190,7 @@ public class OfflineTileProvider extends TileProviderBase {
     }
 
     private Drawable scaleUpFromTile(MapTile target, MapTile base, Drawable baseDrawable) {
+//        Log.d("iPass", "Scale "+base+" to "+target+" from "+baseDrawable);
         int dZoom=target.zoom-base.zoom;
         int tileSize=256;
         int offX=target.x-(base.x<<dZoom),
@@ -255,6 +261,8 @@ public class OfflineTileProvider extends TileProviderBase {
     }
 
     private Drawable blankTile(MapTile tile) {
+        if (blank!=null) return blank;
+
         Rect mTileRect=new Rect(0, 0, 255, 255);
         Paint p=new Paint();
         p.setColor(Color.BLACK);
@@ -268,6 +276,6 @@ public class OfflineTileProvider extends TileProviderBase {
 //        c.drawText(tile.x+":"+tile.y, 30, 128, p);
 //        c.drawText(""+tile.zoom, 100, 170, p);
 
-        return new BitmapDrawable(b);
+        return blank=new BitmapDrawable(b);
     }
 }

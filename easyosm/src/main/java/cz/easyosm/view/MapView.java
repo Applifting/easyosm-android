@@ -1,6 +1,7 @@
 package cz.easyosm.view;
 
 import android.content.Context;
+import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.LinearGradient;
@@ -9,6 +10,8 @@ import android.graphics.Point;
 import android.graphics.Rect;
 import android.graphics.Shader;
 import android.graphics.drawable.Drawable;
+import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.support.v4.view.GestureDetectorCompat;
 import android.util.AttributeSet;
@@ -27,10 +30,13 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import cz.easyosm.R;
 import cz.easyosm.animation.MapAnimation;
 import cz.easyosm.animation.MapChoreographer;
 import cz.easyosm.animation.TileFadeAnimation;
 import cz.easyosm.overlay.MapOverlayBase;
+import cz.easyosm.overlay.marker.Marker;
+import cz.easyosm.overlay.marker.MarkerOverlay;
 import cz.easyosm.tile.MapTile;
 import cz.easyosm.tile.OfflineTileProvider;
 import cz.easyosm.tile.OnlineTileProvider;
@@ -52,6 +58,7 @@ public class MapView extends View {
     private ScaleGestureDetector scaleGestureDetector;
     private GestureDetectorCompat gestureDetector;
     private MapChoreographer choreographer;
+    private Point firstTouch;
 
     private TileProviderBase tileProvider;
     private Map<MapTile, TileFadeAnimation> fades;
@@ -66,6 +73,7 @@ public class MapView extends View {
     private Paint overscrollPaint;
 
     private boolean isScaling=false;
+    private boolean interactive=true;
 
     private Paint textPaint, testPaint;
 
@@ -83,11 +91,45 @@ public class MapView extends View {
     public MapView(Context context, AttributeSet attrs) {
         super(context, attrs);
         init();
+        parseAttrs(attrs);
     }
 
     public MapView(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         init();
+        parseAttrs(attrs);
+    }
+
+    private void parseAttrs(AttributeSet attrs) {
+        TypedArray a=getContext().obtainStyledAttributes(attrs, R.styleable.MapView);
+        float t, r, b, l;
+
+        t=a.getInt(R.styleable.MapView_zoom_max, 20);
+        b=a.getInt(R.styleable.MapView_zoom_min, 0);
+        l=a.getFloat(R.styleable.MapView_zoom_def, 10f);
+
+        setZoomLimits((int)b, (int)t);
+        setZoomLevel(l);
+
+        t=a.getFloat(R.styleable.MapView_limit_N, 86f);
+        r=a.getFloat(R.styleable.MapView_limit_E, 180f);
+        b=a.getFloat(R.styleable.MapView_limit_S, -86f);
+        l=a.getFloat(R.styleable.MapView_limit_W, -180f);
+
+        setBounds(new GeoRect(t, l, b, r));
+
+        t=a.getFloat(R.styleable.MapView_center_lat, 0f);
+        l=a.getFloat(R.styleable.MapView_center_lon, 0f);
+
+        setViewCenter(new GeoPoint(t, l));
+
+        String map;
+        map=a.getString(R.styleable.MapView_map_file);
+        if (map==null) map="osmdroid/map.mbtiles";
+
+        setTileFile(new File(Environment.getExternalStorageDirectory()+"/"+map));
+
+        a.recycle();
     }
 
     private void init() {
@@ -126,8 +168,9 @@ public class MapView extends View {
 
         drawOverscroll(canvas);
 
-        canvas.drawRect(0f, 0f, (float)getWidth(), 40f, testPaint);
-        canvas.drawText(String.format("x: %d; y: %d; z: %.3f", x, y, zoomLevel), 10, 35, textPaint);
+//        canvas.drawRect(0f, 0f, (float)getWidth(), 40f, testPaint);
+//        GeoPoint p=TileMath.PixelXYToLatLong(x, y, zoomLevel, null);
+//        canvas.drawText(String.format("N%.4f E%.4f z%.3f", p.lon, p.lat, zoomLevel), 10, 35, textPaint);
 
         tileProvider.runAsyncTasks();
     }
@@ -192,9 +235,29 @@ public class MapView extends View {
         }
     }
 
+    public void setInteractive(boolean inter) {
+        interactive=inter;
+    }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        if (!interactive) {
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    firstTouch=new Point((int)event.getX(), (int)event.getY());
+                    return true;
+                case MotionEvent.ACTION_UP:
+                    boolean ret=false;
+                    if (MyMath.euclidDist(firstTouch, new Point((int)event.getX(), (int)event.getY()))>5) return false;
+
+                    for (MapListener listener : listeners) {
+                        ret|=listener.onMapTap();
+                    }
+                    return ret;
+                default:
+                    return true;
+            }
+        }
 
         if (event.getActionMasked()==MotionEvent.ACTION_UP) releaseOverscroll();
 
@@ -206,6 +269,9 @@ public class MapView extends View {
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
+
+        x+=(oldw-w)/2;
+        y+=(oldh-h)/2;
     }
 
     /**
@@ -290,6 +356,23 @@ public class MapView extends View {
         overlays.add(overlay);
     }
 
+    public void showPoint(GeoPoint point) {
+        //TODO: do it in a righter way
+        if (point==null) {
+            for (MapOverlayBase overlay : overlays) {
+                if (overlay instanceof MarkerOverlay) overlays.remove(overlay);
+            }
+        }
+        MarkerOverlay o=new MarkerOverlay(this);
+        Marker m=new Marker(point);
+        List l=new ArrayList(1);
+        l.add(m);
+        o.addMarkers(l);
+        overlays.add(o);
+
+        setViewCenter(point);
+    }
+
     public void addMapListener(MapListener listener) {
         this.listeners.add(listener);
     }
@@ -308,6 +391,28 @@ public class MapView extends View {
 
     public void setBounds(GeoRect bounds) {
         this.geoBounds=bounds;
+    }
+
+    public GeoRect getBounds() {
+        return this.geoBounds;
+    }
+
+    public Bundle saveState() {
+        Bundle b=new Bundle();
+        b.putInt("map_x", x);
+        b.putInt("map_y", y);
+        b.putFloat("map_zoom", zoomLevel);
+        Log.d("iPass", "Bundled x"+x+" y"+y+" z"+zoomLevel);
+        return b;
+    }
+
+    public void restoreState(Bundle b) {
+        if (b==null) return;
+
+        setZoomLevel(b.getFloat("map_zoom"));
+        x=b.getInt("map_x");
+        y=b.getInt("map_y");
+        Log.d("iPass", "Restored x"+x+" y"+y+" z"+zoomLevel);
     }
 
     /**
@@ -429,6 +534,12 @@ public class MapView extends View {
                 consumed|=overlay.onSingleTap(touch);
             }
 
+            if (!consumed) {
+                for (MapListener listener : listeners) {
+                    consumed|=listener.onMapTap();
+                }
+            }
+
             return consumed;
         }
 
@@ -481,8 +592,8 @@ public class MapView extends View {
 
     public interface MapListener {
         public void onZoom(float newZoom);
-
-        void onZoomFinished(float zoomLevel);
+        public void onZoomFinished(float zoomLevel);
+        public boolean onMapTap();
     }
 
     private class ReleaseOverscrollAnimation extends MapAnimation {

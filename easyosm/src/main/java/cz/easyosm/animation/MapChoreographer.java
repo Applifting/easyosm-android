@@ -1,11 +1,8 @@
 package cz.easyosm.animation;
 
-import android.util.Log;
 import android.view.animation.Animation;
 import android.view.animation.Transformation;
 
-import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -46,7 +43,6 @@ public class MapChoreographer {
         activeAnimations.remove(animation);
 
         if (!isAnimating()) {
-            Log.d("easyosm", "Quit container animation");
             parent.clearAnimation();
         }
     }

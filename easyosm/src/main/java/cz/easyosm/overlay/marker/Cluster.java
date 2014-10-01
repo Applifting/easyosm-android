@@ -26,8 +26,8 @@ public class Cluster extends MarkerBase {
         textPaint.setColor(Color.WHITE);
     }
 
-    private List<Marker> markers;
-    private GeoPoint point;
+    protected List<Marker> markers;
+    protected GeoPoint point;
 
     public Cluster(Marker a, Marker b) {
         point=new GeoPoint((a.getPoint().lat+b.getPoint().lat)/2, (a.getPoint().lon+b.getPoint().lon)/2);

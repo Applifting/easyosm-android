@@ -1,11 +1,12 @@
 package cz.easyosm.tile;
 
-import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.ColorFilter;
 import android.graphics.PixelFormat;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
+
+import cz.easyosm.util.MyMath;
 
 /**
  * Created by martinjr on 4/7/14.
@@ -43,7 +44,7 @@ public class DownscaleTileDrawable extends Drawable {
             if (baseDrawables[i]==null) continue;
 
             synchronized (baseDrawables[i]) {
-                baseDrawables[i].setBounds((int)(x+ix*tileSize), (int)(y+iy*tileSize), (int)(x+(ix+1)*tileSize), (int)(y+(iy+1)*tileSize));
+                baseDrawables[i].setBounds(MyMath.ceil(x+ix*tileSize), MyMath.ceil(y+iy*tileSize), MyMath.ceil(x+(ix+1)*tileSize), MyMath.ceil(y+(iy+1)*tileSize));
                 baseDrawables[i].setAlpha(alpha);
                 baseDrawables[i].draw(canvas);
             }
